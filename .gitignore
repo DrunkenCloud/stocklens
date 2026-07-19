@@ -23,3 +23,6 @@ out/
 # Local data dumps
 *.sqlite
 *.csv
+
+# breeze-connect creates this on import (cwd-relative)
+logs/
