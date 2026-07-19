@@ -63,12 +63,3 @@ CREATE TABLE IF NOT EXISTS holdings (
     created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 CREATE INDEX IF NOT EXISTS idx_holdings_user ON holdings (user_id);
-
--- Cache AI narratives so we don't re-call per page view.
-CREATE TABLE IF NOT EXISTS analysis_cache (
-    symbol         TEXT NOT NULL REFERENCES companies(symbol),
-    snapshot_date  DATE NOT NULL,     -- ties narrative to the fundamentals it used
-    narrative      TEXT NOT NULL,
-    generated_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
-    PRIMARY KEY (symbol, snapshot_date)
-);

@@ -14,11 +14,10 @@
 
 One app, three surfaces that link together:
 
-1. **Screener + per-stock analysis (View 1 — the heart of it).**
+1. **Screener + per-stock detail (View 1 — the heart of it).**
    Evaluate and pick stocks. Look at fundamentals (P/E, P/B, revenue & earnings
    growth, debt-to-equity, ROE, margins, dividend history), filter/rank across
-   the universe to surface candidates, and read an **AI-generated narrative** that
-   interprets the numbers in plain English.
+   the universe to surface candidates.
 
 2. **Historical returns (View 2).**
    For any stock, chart daily price history and compute the numbers an investor
@@ -50,8 +49,7 @@ mid-build.
 | Mutual funds | **Deferred to v2** | Stocks first; MF data is a separate sourcing problem. |
 | Price/portfolio data | **Breeze API** (prices only, not holdings) | Free with user's ICICI account; strong at market data. Repositioned to its actual strength. |
 | Fundamentals data | **Separate free source** | Breeze does NOT provide fundamentals. Realistic free options are constrained — see `02_DATA_SOURCES.md`. |
-| AI feature (v1) | **Narrative summary of fundamentals** (Option A) | Best effort-to-value ratio; honest, descriptive, not advisory. Other AI options deferred — see `04_AI_FEATURE.md`. |
-| AI provider | **Anthropic API** | Also a portfolio/résumé signal the user can speak to. |
+| AI narrative feature | **Cut from v1** | No Anthropic API budget/key. Ratios + returns speak for themselves; revisit if that changes — see `06_DECISIONS.md` D8. |
 
 ---
 
@@ -61,13 +59,12 @@ The tool **describes and explains** data. It does **not** tell people what to bu
 
 - Ratios and historical returns are descriptive facts.
 - Past growth does **not** predict future returns.
-- The AI narrative interprets numbers ("debt rose while margins compressed"),
-  it does **not** emit buy/sell signals.
+- No feature emits a buy/sell signal or a "score" dressed up as advice.
 - State this plainly in the app UI and the README.
 
 This is not just ethics theatre: it keeps the scope honest, avoids implying the
 tool is a financial advisor (it isn't), and reads as mature to anyone reviewing
-the project. Every AI prompt in `04_AI_FEATURE.md` is written to enforce it.
+the project.
 
 ---
 
@@ -79,7 +76,6 @@ the project. Every AI prompt in `04_AI_FEATURE.md` is written to enforce it.
 - **Data pipeline:** Python scripts / scheduled jobs (see `03_PIPELINE.md`)
 - **Prices:** `breeze-connect` (ICICI Direct Breeze API)
 - **Fundamentals:** free scraper/API (see `02_DATA_SOURCES.md`)
-- **AI:** Anthropic API (`claude-sonnet` class model)
 - **Deploy:** user's existing Azure VM (Docker) is fine for v1
 
 All within the user's existing skill set (FastAPI, Postgres, Next.js, Docker).
@@ -94,7 +90,6 @@ All within the user's existing skill set (FastAPI, Postgres, Next.js, Docker).
 | `01_ARCHITECTURE.md` | System diagram, components, data flow, repo layout. |
 | `02_DATA_SOURCES.md` | Breeze + fundamentals: what's realistic with free data, honestly. |
 | `03_PIPELINE.md` | Ingestion jobs, scheduling, the Breeze auth flow. |
-| `04_AI_FEATURE.md` | The four AI options, the v1 choice, and the exact prompt design. |
 | `05_SCHEMA_AND_API.md` | Postgres schema + FastAPI endpoint list + return formulas. |
 | `06_DECISIONS.md` | Rationale log, incl. why ClickHouse was excluded and where it *would* fit. |
 | `07_ROADMAP.md` | v1 build order (milestones) + what's deferred to v2+. |
@@ -103,6 +98,6 @@ All within the user's existing skill set (FastAPI, Postgres, Next.js, Docker).
 
 ## v1 done-definition (one line)
 
-A user can browse NSE stocks, open one to see its fundamentals + an AI narrative +
-a price/return chart, screen the universe on basic criteria, and manually track a
-portfolio with live-ish returns — all on free data.
+A user can browse NSE stocks, open one to see its fundamentals + a price/return
+chart, screen the universe on basic criteria, and manually track a portfolio
+with live-ish returns — all on free data.

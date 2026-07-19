@@ -31,7 +31,6 @@ Pull core ratios + key financials per symbol from the free source → `fundament
 - **This is the fragile job** (scraper). Expect breakage; see resilience below.
 - Store as a dated snapshot row per symbol so history is preserved and you can show
   trends (`fundamentals` is append-by-snapshot, not overwrite).
-- (Optional later) run the AI-normalization step here — Option D.
 
 ---
 

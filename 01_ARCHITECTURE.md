@@ -25,13 +25,12 @@
                                                        ▲
                                                        │ reads
                                               ┌─────────────────┐
-                          Anthropic API ◀─────│    FastAPI       │
-                          (AI narrative)      │   (backend)      │
+                                              │    FastAPI       │
+                                              │   (backend)      │
                                               │                  │
                                               │  /stocks         │
                                               │  /screen         │
                                               │  /prices         │
-                                              │  /analysis (AI)  │
                                               │  /portfolio      │
                                               └─────────────────┘
                                                        ▲
@@ -54,23 +53,17 @@ scheduler). Kept separate from FastAPI so a slow/broken fetch never blocks the A
 Details in `03_PIPELINE.md`.
 
 **PostgreSQL.**
-Single source of truth for the app. Five tables (`04`/`05`). The pipeline writes;
+Single source of truth for the app. Five tables (`05_SCHEMA_AND_API.md`). The pipeline writes;
 FastAPI reads (plus writes for user-entered holdings). No second database — see
 `06_DECISIONS.md` on why ClickHouse is out.
 
 **FastAPI backend.**
-Read API over the stored data + the AI-analysis endpoint (which calls Anthropic on
-demand and can cache the result). Also handles manual holdings CRUD. Return
+Read API over the stored data. Also handles manual holdings CRUD. Return
 calculations (CAGR, drawdown, etc.) live here as pure functions over `daily_prices`.
 
-**Anthropic API.**
-Called by the `/analysis` endpoint to turn a stock's structured fundamentals into a
-plain-English narrative. Not in the pipeline for v1 (though it *could* help clean
-messy fundamentals later — Option D in `04_AI_FEATURE.md`).
-
 **Next.js frontend.**
-Three surfaces: screener (filter/rank table), stock detail (fundamentals + AI
-narrative + price chart), portfolio (manual entry + returns). Talks only to FastAPI.
+Three surfaces: screener (filter/rank table), stock detail (fundamentals + price
+chart), portfolio (manual entry + returns). Talks only to FastAPI.
 
 ## Data flow, end to end
 
@@ -79,7 +72,7 @@ narrative + price chart), portfolio (manual entry + returns). Talks only to Fast
 2. **Browse/screen (request):** UI → `GET /screen?filters` → FastAPI queries
    `fundamentals` + latest `daily_prices` → ranked list back.
 3. **Stock detail (request):** UI → `GET /stocks/{symbol}` (fundamentals + price
-   series) and `GET /analysis/{symbol}` (AI narrative, cached).
+   series).
 4. **Returns (request):** UI → `GET /prices/{symbol}/returns?from=...&amount=...`
    → FastAPI computes CAGR / total return / drawdown from `daily_prices`.
 5. **Portfolio (request):** UI → `POST/GET /portfolio` → holdings stored in
@@ -107,11 +100,9 @@ stocklens/
 │   │   ├── stocks.py
 │   │   ├── screen.py
 │   │   ├── prices.py
-│   │   ├── analysis.py        # Anthropic call lives here
 │   │   └── portfolio.py
 │   ├── services/
-│   │   ├── returns.py         # CAGR, drawdown, etc. (pure functions)
-│   │   └── ai_analysis.py     # prompt build + Anthropic call + cache
+│   │   └── returns.py         # CAGR, drawdown, etc. (pure functions)
 │   └── requirements.txt
 │
 ├── frontend/                  # Next.js

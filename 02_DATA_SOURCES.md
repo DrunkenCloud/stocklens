@@ -71,15 +71,9 @@ to what's reliably gettable rather than promising terminal-grade depth.
 | Peer / sector comparison sets | 🔴 Flaky | Nice-to-have; defer. |
 
 **Consequence for scope:** v1 View 1 = **core ratios + a few years of key financials
-+ price history + an AI narrative**. That is already a genuinely useful, "comprehensive
-*enough*" stock-evaluation tool. Deep statement-level analysis and peer comps are v2,
-gated on finding a reliable source.
-
-**Messiness → an AI opportunity:** scraped fundamentals come out inconsistent
-(different labels, units, missing fields across stocks). An LLM normalizing them in
-the pipeline is a legit, defensible use — this is **Option D** in `04_AI_FEATURE.md`.
-Don't build it up front; reach for it if/when the raw data proves as messy as it
-usually is.
++ price history**. That is already a genuinely useful, "comprehensive *enough*"
+stock-evaluation tool. Deep statement-level analysis and peer comps are v2, gated
+on finding a reliable source.
 
 ---
 
@@ -91,7 +85,6 @@ usually is.
 | Latest price | Breeze | High | (read from `daily_prices`) |
 | Core fundamentals | Free scraper/API | Medium (fragile) | `fundamentals` |
 | Holdings | **Manual user entry** | N/A | `holdings` |
-| AI narrative | Anthropic API (derived, not stored source) | High | cached on `analysis` |
 
 ## Licensing / ToS reminder
 

@@ -38,19 +38,12 @@ already a useful tool.**
 - Next.js screener table: filter, sort, click through to stock page.
 *Done when:* you can filter the universe on ratios and pick candidates.
 
-**M5 — AI narrative (Option A).**
-- `services/ai_analysis.py`: prompt build (`04_AI_FEATURE.md`) + Anthropic call +
-  `analysis_cache`.
-- `GET /analysis/{symbol}`.
-- "AI analysis" card on the stock page with as-of date + disclaimer.
-*Done when:* each stock shows a grounded plain-English narrative.
-
-**M6 — Portfolio (manual).**
+**M5 — Portfolio (manual).**
 - `holdings` CRUD endpoints + Next.js portfolio page (add/edit/delete).
 - Per-holding + total returns vs. latest close; `account` tag for multiple demats.
 *Done when:* you can hand-enter holdings and see live-ish returns.
 
-**M7 — Polish & ship.**
+**M6 — Polish & ship.**
 - README with the guardrail statement + "not investment advice."
 - Scheduler wired (cron) for the three jobs.
 - Staleness/"as of" surfaced in UI; basic error states.
@@ -58,7 +51,7 @@ already a useful tool.**
 *Done when:* it runs unattended and you actually use it.
 
 **Suggested critical path:** M0 → M1 → M2 gets you a genuinely useful thing fast.
-M3/M4 add the picking side. M5 adds the AI. M6 adds portfolio. Ship after M7.
+M3/M4 add the picking side. M5 adds portfolio. Ship after M6.
 
 ---
 
@@ -71,9 +64,8 @@ Parked deliberately. Each has a trigger for when it's worth doing.
 | **Mutual funds** (tracking, then analysis) | After stocks solid; need an MF/NAV data source. |
 | **Intraday prices** | If you want intraday analysis — *this* is when ClickHouse earns its place. |
 | **ClickHouse OLAP layer** | Intraday, or a market-wide backtester over the full universe. |
-| **AI chat about a stock** (Option B) | After narrative (A) proves useful. |
-| **AI scoring/comparison** (Option C) | Only if kept transparent/descriptive (guardrail). |
-| **AI pipeline normalization** (Option D) | If scraped fundamentals are too messy to use raw. |
+| **AI narrative / chat / scoring** | If an Anthropic API key/budget becomes available (D5). Keep any scoring transparent/descriptive per the guardrail (D6). |
+| **AI pipeline normalization** | If scraped fundamentals are too messy to use raw *and* AI budget exists. |
 | **Dividend-adjusted returns** | If price source provides adjusted closes. |
 | **Peer / sector comparison** | Needs reliable fundamentals coverage across peers. |
 | **Breeze holdings auto-import** | As optional convenience atop manual entry (not a dependency). |
@@ -85,7 +77,6 @@ Parked deliberately. Each has a trigger for when it's worth doing.
 ## What "v1 success" looks like
 
 You open the app, filter NSE stocks on a couple of ratios, click one, read its
-fundamentals + an AI-written explanation + its 5-year return profile, and separately
-track your own holdings across your demat accounts with current returns — all on free
-data, running unattended on your VM. Useful to you first; a clean portfolio piece
-second.
+fundamentals and its 5-year return profile, and separately track your own holdings
+across your demat accounts with current returns — all on free data, running
+unattended on your VM. Useful to you first; a clean portfolio piece second.

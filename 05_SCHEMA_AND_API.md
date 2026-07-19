@@ -68,15 +68,6 @@ CREATE TABLE holdings (
     created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 CREATE INDEX idx_holdings_user ON holdings (user_id);
-
--- Optional: cache AI narratives so we don't re-call per page view.
-CREATE TABLE analysis_cache (
-    symbol         TEXT NOT NULL REFERENCES companies(symbol),
-    snapshot_date  DATE NOT NULL,     -- ties narrative to the fundamentals it used
-    narrative      TEXT NOT NULL,
-    generated_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
-    PRIMARY KEY (symbol, snapshot_date)
-);
 ```
 
 Notes:
@@ -116,14 +107,6 @@ GET /prices/{symbol}/returns?from=YYYY-MM-DD&amount=100000
     → computed: total_return, cagr, max_drawdown, best_year, worst_year,
       value_now (of `amount` invested at `from`)
     Formulas below.
-```
-
-### AI analysis (View 1)
-```
-GET /analysis/{symbol}
-    → { narrative, as_of_date, disclaimer }
-    Serves from analysis_cache if current; else calls Anthropic, caches, returns.
-    See 04_AI_FEATURE.md.
 ```
 
 ### Portfolio

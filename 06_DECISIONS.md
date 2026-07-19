@@ -73,27 +73,36 @@ promise depth the data can't back.
 
 ---
 
-## D5 — AI = narrative summary only (Option A) in v1
+## D5 — AI feature cut from v1 (superseded — was: narrative summary, Option A)
 
-**Decision:** the AI writes a plain-English interpretation of a stock's
-fundamentals. Chat (B), scoring (C), and pipeline-normalization (D) are deferred.
+**Original decision:** the AI would write a plain-English interpretation of a
+stock's fundamentals (Option A). Chat (B), scoring (C), and pipeline-normalization
+(D) were deferred.
 
-**Why:** A has the best value-to-effort ratio, is honest/descriptive, and is
-defensible as a portfolio feature. C risks becoming a buy-signal (guardrail). D is
-reserved for if scraped data proves too messy to use raw. Full rationale in
-`04_AI_FEATURE.md`.
+**Superseded:** no Anthropic API key/budget available, so the whole AI feature —
+not just A — is cut from v1. Ratios, trends, and return stats are shown as plain
+data; the "describe, don't advise" guardrail (D6) still applies to how they're
+presented (no computed "score", no buy/sell language), it's just enforced in UI
+copy instead of an AI system prompt now.
+
+**Why this is fine:** the AI narrative was additive polish on top of already-solid
+data (D4), not load-bearing for the tool's usefulness — View 2 (returns) and the
+screener stand on their own. Revisit if API budget becomes available; the shelved
+design (prompt, caching strategy, endpoint) lived in `04_AI_FEATURE.md` before it
+was removed — recoverable from git history if picked back up.
 
 ---
 
 ## D6 — "Describe, don't advise" guardrail
 
 **Decision:** the tool presents and explains data; it never recommends
-buying/selling and never predicts returns. Enforced in the AI system prompt and in
-UI copy, stated in the README.
+buying/selling and never predicts returns. Enforced in UI copy, stated in the
+README. (Originally also enforced in an AI system prompt — moot now that the AI
+feature is cut, D5 — but the guardrail applies to the whole tool regardless.)
 
 **Why:** keeps scope honest, avoids posing as a financial advisor (it isn't one),
-prevents the AI feature from drifting into liability, and reads as mature. Past
-growth doesn't predict future returns and the tool should say so.
+and reads as mature. Past growth doesn't predict future returns and the tool
+should say so.
 
 ---
 
@@ -115,6 +124,6 @@ D1. Revisit only if the pipeline grows many interdependent jobs or moves intrada
 | D2 | Manual holdings | 3 demat accounts; works for any user |
 | D3 | Breeze = prices only | Free, strong at market data, its real strength |
 | D4 | Fundamentals scoped to free-reliable | No clean free deep-fundamentals source |
-| D5 | AI = narrative summary (A) | Best value/effort, honest, defensible |
+| D5 | AI feature cut from v1 | No Anthropic API key/budget available |
 | D6 | Describe-don't-advise guardrail | Honest scope, not a financial advisor |
 | D7 | cron, no Airflow/Kafka | Right-sized for 3 low-freq jobs |
