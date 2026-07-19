@@ -24,3 +24,13 @@ specification. Start with [`00_OVERVIEW.md`](00_OVERVIEW.md); build order is in
 - **Fundamentals:** free scraper/API (see [`02_DATA_SOURCES.md`](02_DATA_SOURCES.md))
 - **AI narrative:** Anthropic API
 - **Deploy:** Docker Compose on an Azure VM
+
+## Running locally
+
+```
+docker compose up --build
+curl localhost:8000/health   # {"status":"ok","companies":30}
+```
+
+Postgres schema (`db/schema.sql`) and seed companies (`db/seed.sql`) load
+automatically on first boot via Postgres's `docker-entrypoint-initdb.d`.
