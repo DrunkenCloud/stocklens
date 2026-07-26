@@ -9,7 +9,11 @@ the cron scheduler).
 
 ```
 pip install -r pipeline/requirements.txt
+cp .env.example .env   # if you haven't already, at the repo root
 ```
+
+Jobs auto-load `.env` from the repo root (`pipeline/__init__.py`) — no manual
+`export` needed, just fill in `.env` and run.
 
 `DATABASE_URL` needs to reach the Postgres container from the host — with the
 default `docker-compose.yml` port mapping that's
@@ -25,7 +29,6 @@ default `docker-compose.yml` port mapping that's
    ```
    Open that URL, log in, and copy the session token from the redirect URL into
    `BREEZE_API_SESSION` in `.env`.
-3. `export $(cat .env | xargs)` (or your usual env-loading method) before running jobs.
 
 ## fetch_prices
 
