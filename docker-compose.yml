@@ -21,6 +21,7 @@ services:
     build: ./backend
     environment:
       DATABASE_URL: postgresql://stocklens:stocklens@db:5432/stocklens
+      BREEZE_API_KEY: ${BREEZE_API_KEY:-}
     ports:
       - "8000:8000"
     depends_on:

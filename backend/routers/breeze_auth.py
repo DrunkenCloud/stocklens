@@ -12,10 +12,22 @@ the endpoint's existence isn't advertised to random scanners.
 """
 import os
 import pathlib
+from urllib.parse import quote
 
 from fastapi import APIRouter, HTTPException, Response
 
 router = APIRouter()
+
+
+@router.get("/breeze/login-url")
+def breeze_login_url():
+    # Mirrors pipeline/breeze_client.py's login_url() - duplicated rather than
+    # imported since backend/ and pipeline/ are deliberately separate
+    # (01_ARCHITECTURE.md: pipeline is "not imported by API"). api_key alone
+    # can't authenticate anything (needs api_secret + a real login too), so
+    # exposing it here is no riskier than an OAuth client_id.
+    api_key = os.environ["BREEZE_API_KEY"]
+    return {"url": f"https://api.icicidirect.com/apiuser/login?api_key={quote(api_key)}"}
 
 
 def env_file_path() -> pathlib.Path:
