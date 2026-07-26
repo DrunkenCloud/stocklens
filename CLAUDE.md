@@ -7,11 +7,12 @@ budget, see `06_DECISIONS.md` D5).
 
 **Build order is `07_ROADMAP.md`** (M0 skeleton → M1 prices → M2 returns → …
 → M6 ship). Progress: M0–M5 are built - skeleton/DB, a Breeze pipeline
-verified live (82k+ real price rows, 29/30 seeded companies), return math +
-`/prices` endpoints, fundamentals via yfinance (also verified live) +
-`/stocks` endpoints, a filterable/sortable screener, and manual portfolio
-CRUD (`/portfolio`, single fixed user - D9, no auth in v1). Only M6 (polish +
-scheduler + deploy) is left.
+verified live (all 30 seeded companies, real price history back to 2015),
+return math + `/prices` endpoints, fundamentals via yfinance (also verified
+live) + `/stocks` endpoints, a filterable/sortable screener, and manual
+portfolio CRUD (`/portfolio`, single fixed user - D9, no auth in v1). M6 is
+mostly done (cron wiring, staleness UI, error states); only the actual VM
+deploy is outstanding, pending the user's infra access.
 
 ## Read before building
 

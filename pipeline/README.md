@@ -63,11 +63,13 @@ python -m pipeline.jobs.test_fetch_prices
 ```
 
 Verified against a live account: auth, `get_names` resolution, and a full
-`--backfill` for the 30 seeded companies (29 succeeded, 2015-01-01 through
-today, ~2,850 rows each). One known failure: `TATAMOTORS` - Breeze's
-`get_names()` returns "Result Not Found" for it, most likely because of a
-corporate action (demerger) changing what the ticker maps to. Not yet
-resolved; needs a manual look rather than a guessed fix.
+`--backfill` for all 30 seeded companies (2015-01-01 through today, ~2,850
+rows each). `TATAMOTORS` originally failed here - turned out to be a real
+stale ticker (Tata Motors demerged in 2025 into `TMCV`/`TMPV`, confirmed
+against the actual NSE/BSE listings, not guessed); `db/seed.sql` now seeds
+the two successor symbols instead and both backfill cleanly (`TMCV` only has
+~170 days of history since it's newly listed post-demerger; `TMPV` kept the
+full pre-2026 history).
 
 ## fetch_fundamentals
 
@@ -86,10 +88,8 @@ Snapshot-append into `fundamentals` (one row per symbol per day run), per
 python -m pipeline.test_fundamentals_source
 ```
 
-Verified live: 29/30 seeded companies fetched successfully (real P/E, P/B,
-ROE, margins, debt-to-equity, dividend yield, market cap). `TATAMOTORS` fails
-here too - independent confirmation (different data source, same symbol)
-that it's a real stale-ticker issue, not a Breeze-specific quirk.
+Verified live: all 30 seeded companies fetched successfully (real P/E, P/B,
+ROE, margins, debt-to-equity, dividend yield, market cap).
 
 ## Scheduling (cron)
 

@@ -28,7 +28,11 @@ INSERT INTO companies (symbol, name, sector) VALUES
     ('POWERGRID',  'Power Grid Corporation of India Ltd','Power'),
     ('M&M',        'Mahindra & Mahindra Ltd',           'Automobile'),
     ('TATASTEEL',  'Tata Steel Ltd',                     'Metals'),
-    ('TATAMOTORS', 'Tata Motors Ltd',                   'Automobile'),
+    -- TATAMOTORS demerged (2025) into two separately-listed NSE symbols;
+    -- the old ticker is gone, confirmed by both Breeze and Yahoo Finance
+    -- returning "not found" for it (pipeline/README.md).
+    ('TMCV',       'Tata Motors Ltd (Commercial Vehicles)', 'Automobile'),
+    ('TMPV',       'Tata Motors Passenger Vehicles Ltd',    'Automobile'),
     ('ADANIENT',   'Adani Enterprises Ltd',             'Diversified'),
     ('HCLTECH',    'HCL Technologies Ltd',              'IT'),
     ('JSWSTEEL',   'JSW Steel Ltd',                      'Metals'),
