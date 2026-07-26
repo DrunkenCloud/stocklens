@@ -7,8 +7,9 @@ budget, see `06_DECISIONS.md` D5).
 
 **Build order is `07_ROADMAP.md`** (M0 skeleton → M1 prices → M2 returns → …
 → M6 ship). Progress: M0 (skeleton/DB), M1 (Breeze pipeline - verified live:
-82k+ real daily price rows backfilled for 29/30 seeded companies), and M2
-(return formulas + `/prices` endpoints + stock detail page) are built.
+82k+ real daily price rows for 29/30 seeded companies), M2 (return formulas +
+`/prices` endpoints + stock detail page), and M3 (fundamentals via yfinance -
+verified live, `/stocks` endpoints, ratios on the stock page) are built.
 
 ## Read before building
 

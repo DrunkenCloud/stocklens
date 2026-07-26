@@ -116,6 +116,33 @@ D1. Revisit only if the pipeline grows many interdependent jobs or moves intrada
 
 ---
 
+## D8 — Fundamentals source: `yfinance` (Yahoo Finance)
+
+**Decision:** M3's `fetch_fundamentals` job pulls fundamentals via the
+`yfinance` Python library (`Ticker(f"{symbol}.NS").info` + `.financials` for
+multi-year revenue), not a hand-rolled Screener.in/NSE HTML scraper.
+
+**Why:** `02_DATA_SOURCES.md` deliberately left the exact source open ("pick
+one primary, keep a fallback"). A hand-written scraper breaks on every markup
+change to the source site; `yfinance` is an actively-maintained community
+library that already absorbs that churn, and it covers NSE directly via the
+`.NS` ticker suffix - no separate per-symbol code mapping needed (unlike
+Breeze, D3). Still free-tier-fragile in the sense `02_DATA_SOURCES.md` warns
+about (an unofficial API wrapper, not a stable contract), just fragile in a
+place a library maintainer absorbs instead of us.
+
+**Field-scaling gotcha found by testing live, not assumed:** `yfinance`'s
+`debtToEquity` comes back pre-multiplied by 100 (Yahoo convention) while
+`returnOnEquity`/`operatingMargins`/`revenueGrowth` come back as plain
+fractions, and `dividendYield` is already a plain percent - four different
+scalings across five fields. Confirmed against real tickers (TCS/ITC's
+near-zero real-world debt only matches the schema's plain-ratio convention
+once `debtToEquity` is divided by 100) before trusting it - same lesson as
+the Breeze `stock_code` surprise in M1 (D3). See
+`pipeline/fundamentals_source.py`'s docstring for the verified mapping.
+
+---
+
 ## Summary table
 
 | # | Decision | One-line reason |
@@ -127,3 +154,4 @@ D1. Revisit only if the pipeline grows many interdependent jobs or moves intrada
 | D5 | AI feature cut from v1 | No Anthropic API key/budget available |
 | D6 | Describe-don't-advise guardrail | Honest scope, not a financial advisor |
 | D7 | cron, no Airflow/Kafka | Right-sized for 3 low-freq jobs |
+| D8 | Fundamentals via yfinance | Community-maintained, covers NSE, no code mapping needed |

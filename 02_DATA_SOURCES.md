@@ -60,6 +60,11 @@ to what's reliably gettable rather than promising terminal-grade depth.
 - **NSE filings / bhavcopy.** Official, free, stable for *some* data (corporate
   filings, EOD dumps) but not a tidy ratio feed — more parsing work.
 
+**v1 picked `yfinance`** (a "free-tier API"-shaped middle ground: an unofficial
+wrapper, not hand-rolled HTML scraping, and a community absorbs the breakage
+instead of us). Verified live, 29/30 seeded companies. See `06_DECISIONS.md` D8
+for why and the field-scaling gotchas found while verifying it.
+
 **What's realistically available for free (tier honestly):**
 
 | Data | Free availability | Notes |

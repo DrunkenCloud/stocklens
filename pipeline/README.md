@@ -66,3 +66,25 @@ today, ~2,850 rows each). One known failure: `TATAMOTORS` - Breeze's
 `get_names()` returns "Result Not Found" for it, most likely because of a
 corporate action (demerger) changing what the ticker maps to. Not yet
 resolved; needs a manual look rather than a guessed fix.
+
+## fetch_fundamentals
+
+Pulls fundamentals via Yahoo Finance (`yfinance`) - see `06_DECISIONS.md` D8
+for why this source and the field-scaling gotchas found while verifying it.
+No separate code-mapping step needed (unlike Breeze); Yahoo's NSE convention
+is just `{ticker}.NS`.
+
+```
+python -m pipeline.jobs.fetch_fundamentals
+```
+
+Snapshot-append into `fundamentals` (one row per symbol per day run), per
+`03_PIPELINE.md`. Self-check for the pure conversion/CAGR math:
+```
+python -m pipeline.test_fundamentals_source
+```
+
+Verified live: 29/30 seeded companies fetched successfully (real P/E, P/B,
+ROE, margins, debt-to-equity, dividend yield, market cap). `TATAMOTORS` fails
+here too - independent confirmation (different data source, same symbol)
+that it's a real stale-ticker issue, not a Breeze-specific quirk.
