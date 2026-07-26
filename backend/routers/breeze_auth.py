@@ -5,7 +5,13 @@ requiring manual copy-paste into .env. See pipeline/README.md and
 The redirect target is a fixed setting in the user's Breeze app registration
 on ICICI's developer portal (not passed dynamically), so it must be
 registered there as:
-    https://<domain>/api/breeze/callback/<BREEZE_CALLBACK_TOKEN>
+    https://<domain>/api/cb/<BREEZE_CALLBACK_TOKEN>
+Kept deliberately short (path + token, not "/breeze/callback/") - ICICI's
+portal silently truncates the redirect URL field at ~60 characters
+(confirmed live: a 32-char token got cut to 9 chars, breaking the original
+longer path). Use a short token (8 hex chars is plenty for this low-stakes
+single-user callback) to leave margin.
+
 The path-embedded token is the only guard on this endpoint (no other auth in
 this single-user app) - a wrong/missing token gets a 404, not a 401/403, so
 the endpoint's existence isn't advertised to random scanners.
@@ -46,7 +52,7 @@ def set_env_var(path: pathlib.Path, key: str, value: str) -> None:
     path.write_text("\n".join(lines) + "\n")
 
 
-@router.get("/breeze/callback/{token}")
+@router.get("/cb/{token}")
 def breeze_callback(token: str, apisession: str):
     expected = os.environ.get("BREEZE_CALLBACK_TOKEN")
     if not expected or token != expected:
