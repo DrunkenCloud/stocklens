@@ -20,7 +20,7 @@ import os
 import pathlib
 from urllib.parse import quote
 
-from fastapi import APIRouter, HTTPException, Response
+from fastapi import APIRouter, HTTPException, Request, Response
 
 router = APIRouter()
 
@@ -52,11 +52,21 @@ def set_env_var(path: pathlib.Path, key: str, value: str) -> None:
     path.write_text("\n".join(lines) + "\n")
 
 
-@router.get("/cb/{token}")
-def breeze_callback(token: str, apisession: str):
+@router.api_route("/cb/{token}", methods=["GET", "POST"])
+async def breeze_callback(token: str, request: Request):
+    # Confirmed live: ICICI's redirect is a POST (form-style), not a plain
+    # GET - apisession still arrives as a query param on that POST, but pull
+    # from form data too in case that ever changes.
     expected = os.environ.get("BREEZE_CALLBACK_TOKEN")
     if not expected or token != expected:
         raise HTTPException(status_code=404, detail="not found")
+
+    apisession = request.query_params.get("apisession")
+    if not apisession and request.method == "POST":
+        form = await request.form()
+        apisession = form.get("apisession")
+    if not apisession:
+        raise HTTPException(status_code=400, detail="missing apisession")
 
     set_env_var(env_file_path(), "BREEZE_API_SESSION", apisession)
 
