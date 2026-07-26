@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from db import pool
-from routers import prices, screen, stocks
+from routers import portfolio, prices, screen, stocks
 
 app = FastAPI(title="StockLens API")
 app.add_middleware(
@@ -14,6 +14,7 @@ app.add_middleware(
 app.include_router(prices.router)
 app.include_router(stocks.router)
 app.include_router(screen.router)
+app.include_router(portfolio.router)
 
 
 @app.get("/health")

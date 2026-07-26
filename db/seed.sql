@@ -34,3 +34,8 @@ INSERT INTO companies (symbol, name, sector) VALUES
     ('JSWSTEEL',   'JSW Steel Ltd',                      'Metals'),
     ('BAJAJFINSV', 'Bajaj Finserv Ltd',                 'Financials')
 ON CONFLICT (symbol) DO NOTHING;
+
+-- Single default user (v1 is single-user, no auth - see 06_DECISIONS.md).
+-- Fixed id so the backend can reference it without a lookup.
+INSERT INTO users (id) VALUES ('00000000-0000-0000-0000-000000000001')
+ON CONFLICT (id) DO NOTHING;

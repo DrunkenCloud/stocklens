@@ -6,12 +6,12 @@ fundamentals from a free scraper/API. No AI feature (cut — no Anthropic API
 budget, see `06_DECISIONS.md` D5).
 
 **Build order is `07_ROADMAP.md`** (M0 skeleton → M1 prices → M2 returns → …
-→ M6 ship). Progress: M0 (skeleton/DB), M1 (Breeze pipeline - verified live:
-82k+ real daily price rows for 29/30 seeded companies), M2 (return formulas +
-`/prices` endpoints + stock detail page), M3 (fundamentals via yfinance -
-verified live, `/stocks` endpoints, ratios on the stock page), and M4
-(`GET /screen` + a filterable/sortable screener table as the home page) are
-built.
+→ M6 ship). Progress: M0–M5 are built - skeleton/DB, a Breeze pipeline
+verified live (82k+ real price rows, 29/30 seeded companies), return math +
+`/prices` endpoints, fundamentals via yfinance (also verified live) +
+`/stocks` endpoints, a filterable/sortable screener, and manual portfolio
+CRUD (`/portfolio`, single fixed user - D9, no auth in v1). Only M6 (polish +
+scheduler + deploy) is left.
 
 ## Read before building
 

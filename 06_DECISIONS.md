@@ -143,6 +143,22 @@ the Breeze `stock_code` surprise in M1 (D3). See
 
 ---
 
+## D9 — Single fixed default user, no auth in v1
+
+**Decision:** `holdings.user_id` points at one seeded row
+(`00000000-0000-0000-0000-000000000001`, `db/seed.sql`). The `/portfolio`
+endpoints operate against that fixed id directly - no login, no signup, no
+session/token.
+
+**Why:** v1 is explicitly single-user (`07_ROADMAP.md` defers "real auth /
+multi-user" to v2, triggered only "if sharing beyond yourself"). The `users`
+table and `holdings.user_id` foreign key already exist to keep that seam open
+(`05_SCHEMA_AND_API.md`'s own comment: "even single-user, keep the seam for
+multi-user") - a fixed id is the minimum that honors the seam without
+building auth nobody needs yet.
+
+---
+
 ## Summary table
 
 | # | Decision | One-line reason |
@@ -155,3 +171,4 @@ the Breeze `stock_code` surprise in M1 (D3). See
 | D6 | Describe-don't-advise guardrail | Honest scope, not a financial advisor |
 | D7 | cron, no Airflow/Kafka | Right-sized for 3 low-freq jobs |
 | D8 | Fundamentals via yfinance | Community-maintained, covers NSE, no code mapping needed |
+| D9 | Single fixed default user, no auth | v1 is single-user; schema seam kept for v2 |
