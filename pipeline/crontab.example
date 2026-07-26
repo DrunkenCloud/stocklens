@@ -1,0 +1,12 @@
+# Cadence per 03_PIPELINE.md. Install with: crontab pipeline/crontab.example
+# (edit the path below to match where you clone the repo on the VM first).
+#
+# refresh_universe isn't built (v1 uses the hand-seeded companies in
+# db/seed.sql, per M0 - see 07_ROADMAP.md); only the two jobs that exist
+# are wired here.
+
+# fetch_prices: Mon-Fri 19:00 IST, after market close + settle
+0 19 * * 1-5 /path/to/trading/pipeline/run_job.sh jobs.fetch_prices >> /path/to/trading/pipeline/cron.log 2>&1
+
+# fetch_fundamentals: weekly, Sunday 03:00 IST
+0 3 * * 0 /path/to/trading/pipeline/run_job.sh jobs.fetch_fundamentals >> /path/to/trading/pipeline/cron.log 2>&1

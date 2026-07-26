@@ -130,11 +130,13 @@ export default async function StockPage({ params }: { params: Promise<{ symbol: 
   }
 
   const returns = await getReturns(symbol, yearsAgo(5));
+  const latestPriceDate = prices[prices.length - 1].date;
 
   return (
     <main style={{ padding: 24, fontFamily: "system-ui, sans-serif", maxWidth: 900, margin: "0 auto" }}>
       <h1>{stock.name} ({stock.symbol})</h1>
       {stock.sector && <p style={{ color: "#666", marginTop: -8 }}>{stock.sector}</p>}
+      <p style={{ fontSize: 12, color: "#666" }}>Prices as of {latestPriceDate}</p>
       <PriceChart points={prices.map((p: PricePoint) => ({ date: p.date, close: p.close }))} />
       <FundamentalsCard stock={stock} />
 

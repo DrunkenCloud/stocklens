@@ -35,6 +35,7 @@ function fmt(v: number | null, suffix = ""): string {
 export default function Screener() {
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
   const [peMax, setPeMax] = useState("");
   const [roeMin, setRoeMin] = useState("");
   const [sector, setSector] = useState("");
@@ -48,9 +49,14 @@ export default function Screener() {
     if (sector) params.set("sector", sector);
 
     setLoading(true);
+    setError("");
     fetch(`${API_URL}/screen?${params}`)
-      .then((res) => res.json())
+      .then((res) => {
+        if (!res.ok) throw new Error(`screen fetch failed: ${res.status}`);
+        return res.json();
+      })
       .then(setRows)
+      .catch(() => setError("Couldn't reach the backend. Is the API running?"))
       .finally(() => setLoading(false));
   }, [peMax, roeMin, sector, sortBy, order]);
 
@@ -83,9 +89,10 @@ export default function Screener() {
         </label>
       </div>
 
+      {error && <p style={{ color: "#b00" }}>{error}</p>}
       {loading ? (
         <p>Loading...</p>
-      ) : (
+      ) : error ? null : (
         <table style={{ width: "100%", borderCollapse: "collapse" }}>
           <thead>
             <tr style={{ borderBottom: "1px solid #ddd" }}>
@@ -123,7 +130,7 @@ export default function Screener() {
           </tbody>
         </table>
       )}
-      {!loading && rows.length === 0 && <p>No companies match these filters.</p>}
+      {!loading && !error && rows.length === 0 && <p>No companies match these filters.</p>}
     </main>
   );
 }

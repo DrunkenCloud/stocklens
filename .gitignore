@@ -27,3 +27,4 @@ out/
 
 # breeze-connect creates this on import (cwd-relative)
 logs/
+pipeline/cron.log

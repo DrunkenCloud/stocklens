@@ -44,8 +44,12 @@ export default function PortfolioPage() {
 
   function refresh() {
     fetch(`${API_URL}/portfolio`)
-      .then((res) => res.json())
-      .then(setData);
+      .then((res) => {
+        if (!res.ok) throw new Error(`portfolio fetch failed: ${res.status}`);
+        return res.json();
+      })
+      .then(setData)
+      .catch(() => setError("Couldn't reach the backend. Is the API running?"));
   }
 
   useEffect(refresh, []);
