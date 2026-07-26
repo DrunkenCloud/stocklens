@@ -1,10 +1,10 @@
 # StockLens — Project Overview (v1 Spec)
 
 > A personal stock-evaluation tool: research Indian (NSE) stocks through their
-> fundamentals and price history, get an AI-written plain-English analysis of the
-> numbers, and track your own holdings by hand. Built on FastAPI + PostgreSQL +
-> Next.js, with a small data pipeline pulling prices from the ICICI Direct
-> **Breeze API** and fundamentals from a free source.
+> fundamentals and price history, and track your own holdings by hand. Built on
+> FastAPI + PostgreSQL + a Vite/React frontend, with a small data pipeline
+> pulling prices from the ICICI Direct **Breeze API** and fundamentals from a
+> free source.
 
 *(StockLens is a working name — rename freely.)*
 
@@ -49,7 +49,7 @@ mid-build.
 | Mutual funds | **Deferred to v2** | Stocks first; MF data is a separate sourcing problem. |
 | Price/portfolio data | **Breeze API** (prices only, not holdings) | Free with user's ICICI account; strong at market data. Repositioned to its actual strength. |
 | Fundamentals data | **Separate free source** | Breeze does NOT provide fundamentals. Realistic free options are constrained — see `02_DATA_SOURCES.md`. |
-| AI narrative feature | **Cut from v1** | No Anthropic API budget/key. Ratios + returns speak for themselves; revisit if that changes — see `06_DECISIONS.md` D8. |
+| AI narrative feature | **Cut from v1** | No Anthropic API budget/key. Ratios + returns speak for themselves; revisit if that changes — see `06_DECISIONS.md` D5. |
 
 ---
 
@@ -70,15 +70,19 @@ the project.
 
 ## Tech stack
 
-- **Backend:** Python, FastAPI
+- **Backend:** Python, FastAPI (routes under `/api`)
 - **DB:** PostgreSQL
-- **Frontend:** Next.js (TypeScript)
+- **Frontend:** Vite + React + react-router (TypeScript), static SPA — switched
+  from an original Next.js choice once every page went client-side; see
+  `06_DECISIONS.md` D10
 - **Data pipeline:** Python scripts / scheduled jobs (see `03_PIPELINE.md`)
 - **Prices:** `breeze-connect` (ICICI Direct Breeze API)
 - **Fundamentals:** free scraper/API (see `02_DATA_SOURCES.md`)
-- **Deploy:** user's existing Azure VM (Docker) is fine for v1
+- **Deploy:** user's existing Azure VM — native processes (Postgres, backend,
+  Caddy), not Docker; the VM's real memory budget (848MB) ruled that out —
+  see `06_DECISIONS.md` D10
 
-All within the user's existing skill set (FastAPI, Postgres, Next.js, Docker).
+All within the user's existing skill set (FastAPI, Postgres, React, Docker for local dev).
 
 ---
 

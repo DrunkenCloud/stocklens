@@ -32,6 +32,13 @@ default `docker-compose.yml` port mapping that's
    Open that URL, log in, and copy the session token from the redirect URL into
    `BREEZE_API_SESSION` in `.env`.
 
+**On the deployed VM**, step 2 is automated: `backend/routers/breeze_auth.py`
+serves `GET /api/breeze/callback/<BREEZE_CALLBACK_TOKEN>?apisession=...` and
+writes `BREEZE_API_SESSION` into `.env` directly — no copy-paste. This only
+works because the Breeze app's registered redirect URL (a fixed setting in
+ICICI's developer portal, not passed at login time) has been pointed at that
+callback URL — a one-time manual step in the portal, done once when deploying.
+
 ## map_breeze_codes
 
 Run once (and again any time you add a company): Breeze's internal `stock_code`

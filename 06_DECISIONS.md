@@ -159,6 +159,42 @@ building auth nobody needs yet.
 
 ---
 
+## D10 — Frontend: Vite + React (not Next.js); deploy: native processes (not Docker)
+
+**Decision:** switched the frontend from Next.js (`00_OVERVIEW.md`'s original
+choice) to a Vite + React + react-router SPA. Deployment runs native
+processes on the VPS (Postgres via apt, backend via a `systemctl --user`
+service) instead of Docker Compose in production; Docker stays for local dev
+only. Backend routes moved under an `/api` prefix in both dev and prod.
+
+**Why:** by M6, every frontend page had already become client-side-fetching
+(screener/portfolio always were; the stock detail page was converted for
+this deploy). Next.js's App Router (SSR, static-export dynamic-route
+constraints, Suspense-for-`useSearchParams`) stopped buying anything once
+nothing server-renders - it was just acting as an elaborate static site
+generator for what is actually a plain SPA. Vite removes that friction and
+ships a smaller bundle (77KB gzipped vs. Next's ~100KB+ shared JS). Neither
+choice changes server RAM usage (both end as static files served by Caddy,
+zero persistent Node.js process) - the win is code simplicity, not the
+memory budget below.
+
+The deploy target (an existing Azure VPS, already running Caddy + a "memos"
+app) has **848MB RAM, 394MB available** - confirmed by SSH before deciding
+anything. Docker was installed but unused; running Postgres + backend +
+frontend each in a container adds real per-container overhead on a box this
+tight, for no benefit once the frontend needs no runtime at all. Native
+Postgres + a lightweight Python venv backend fits comfortably; the `/api`
+prefix lets Caddy split static files from the backend cleanly via a single
+reverse-proxy rule.
+
+Also: no passwordless sudo on the VPS, so the one-time root setup (installing
+`postgresql`, creating the DB role, `loginctl enable-linger`) is a short
+script the user runs themselves - not something automatable over a
+non-interactive SSH session, and not something to ask for a sudo password to
+work around.
+
+---
+
 ## Summary table
 
 | # | Decision | One-line reason |
@@ -172,3 +208,4 @@ building auth nobody needs yet.
 | D7 | cron, no Airflow/Kafka | Right-sized for 3 low-freq jobs |
 | D8 | Fundamentals via yfinance | Community-maintained, covers NSE, no code mapping needed |
 | D9 | Single fixed default user, no auth | v1 is single-user; schema seam kept for v2 |
+| D10 | Vite/React (not Next.js); native deploy (not Docker) | Every page went client-side; VPS has 848MB RAM |

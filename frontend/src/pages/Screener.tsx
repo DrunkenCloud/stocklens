@@ -1,8 +1,6 @@
-"use client";
-
 import { useEffect, useState } from "react";
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+import { Link } from "react-router-dom";
+import { API_URL } from "../api";
 
 type Row = {
   symbol: string;
@@ -113,7 +111,7 @@ export default function Screener() {
             {rows.map((r) => (
               <tr key={r.symbol} style={{ borderBottom: "1px solid #eee" }}>
                 <td style={{ padding: 6 }}>
-                  <a href={`/stock/${r.symbol}`}>{r.symbol}</a>
+                  <Link to={`/stock/${r.symbol}`}>{r.symbol}</Link>
                   <div style={{ fontSize: 11, color: "#666" }}>{r.name}</div>
                 </td>
                 <td style={{ textAlign: "right", padding: 6 }}>

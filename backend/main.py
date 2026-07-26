@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from db import pool
-from routers import portfolio, prices, screen, stocks
+from routers import breeze_auth, portfolio, prices, screen, stocks
 
 app = FastAPI(title="StockLens API")
 app.add_middleware(
@@ -11,13 +11,14 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-app.include_router(prices.router)
-app.include_router(stocks.router)
-app.include_router(screen.router)
-app.include_router(portfolio.router)
+app.include_router(prices.router, prefix="/api")
+app.include_router(stocks.router, prefix="/api")
+app.include_router(screen.router, prefix="/api")
+app.include_router(portfolio.router, prefix="/api")
+app.include_router(breeze_auth.router, prefix="/api")
 
 
-@app.get("/health")
+@app.get("/api/health")
 def health():
     with pool.connection() as conn:
         (count,) = conn.execute("SELECT count(*) FROM companies").fetchone()

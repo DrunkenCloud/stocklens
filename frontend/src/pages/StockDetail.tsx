@@ -1,6 +1,39 @@
-const API_URL = process.env.API_URL ?? "http://localhost:8000";
+import { useEffect, useState } from "react";
+import { useParams } from "react-router-dom";
+import { API_URL } from "../api";
 
 type PricePoint = { date: string; close: number };
+
+type Fundamentals = {
+  snapshot_date: string;
+  pe: number | null;
+  pb: number | null;
+  roe: number | null;
+  op_margin: number | null;
+  rev_growth_1y: number | null;
+  rev_cagr_3y: number | null;
+  debt_to_equity: number | null;
+  dividend_yield: number | null;
+  market_cap: number | null;
+};
+
+type Stock = {
+  symbol: string;
+  name: string;
+  sector: string | null;
+  fundamentals: Fundamentals | null;
+};
+
+type Returns = {
+  date_start: string;
+  total_return_pct: number;
+  cagr_pct: number | null;
+  max_drawdown_pct: number;
+  best_year: { year: number; return_pct: number };
+  worst_year: { year: number; return_pct: number };
+  amount_invested: number;
+  value_now: number;
+};
 
 function PriceChart({ points }: { points: PricePoint[] }) {
   if (points.length < 2) return <p>Not enough data to chart.</p>;
@@ -29,26 +62,6 @@ function PriceChart({ points }: { points: PricePoint[] }) {
   );
 }
 
-type Fundamentals = {
-  snapshot_date: string;
-  pe: number | null;
-  pb: number | null;
-  roe: number | null;
-  op_margin: number | null;
-  rev_growth_1y: number | null;
-  rev_cagr_3y: number | null;
-  debt_to_equity: number | null;
-  dividend_yield: number | null;
-  market_cap: number | null;
-};
-
-type Stock = {
-  symbol: string;
-  name: string;
-  sector: string | null;
-  fundamentals: Fundamentals | null;
-};
-
 function fmt(v: number | null, suffix = ""): string {
   return v === null ? "N/A" : `${v.toFixed(2)}${suffix}`;
 }
@@ -76,36 +89,67 @@ function FundamentalsCard({ stock }: { stock: Stock }) {
   );
 }
 
-async function getStock(symbol: string): Promise<Stock | null> {
-  const res = await fetch(`${API_URL}/stocks/${symbol}`, { cache: "no-store" });
-  if (res.status === 404) return null;
-  if (!res.ok) throw new Error(`stock fetch failed: ${res.status}`);
-  return res.json();
-}
-
-async function getPrices(symbol: string) {
-  const res = await fetch(`${API_URL}/prices/${symbol}`, { cache: "no-store" });
-  if (res.status === 404) return null;
-  if (!res.ok) throw new Error(`prices fetch failed: ${res.status}`);
-  return res.json();
-}
-
-async function getReturns(symbol: string, from: string) {
-  const res = await fetch(`${API_URL}/prices/${symbol}/returns?from=${from}&amount=100000`, { cache: "no-store" });
-  if (res.status === 404) return null;
-  if (!res.ok) throw new Error(`returns fetch failed: ${res.status}`);
-  return res.json();
-}
-
 function yearsAgo(n: number): string {
   const d = new Date();
   d.setFullYear(d.getFullYear() - n);
   return d.toISOString().slice(0, 10);
 }
 
-export default async function StockPage({ params }: { params: Promise<{ symbol: string }> }) {
-  const { symbol } = await params;
-  const stock = await getStock(symbol);
+export default function StockDetail() {
+  const { symbol = "" } = useParams<{ symbol: string }>();
+  const [stock, setStock] = useState<Stock | null | undefined>(undefined);
+  const [prices, setPrices] = useState<PricePoint[] | null | undefined>(undefined);
+  const [returns, setReturns] = useState<Returns | null>(null);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (!symbol) return;
+    setStock(undefined);
+    setPrices(undefined);
+    setReturns(null);
+    setError("");
+
+    fetch(`${API_URL}/stocks/${symbol}`)
+      .then((res) => {
+        if (res.status === 404) return null;
+        if (!res.ok) throw new Error(`stock fetch failed: ${res.status}`);
+        return res.json();
+      })
+      .then(setStock)
+      .catch(() => setError("Couldn't reach the backend. Is the API running?"));
+
+    fetch(`${API_URL}/prices/${symbol}`)
+      .then((res) => {
+        if (res.status === 404) return null;
+        if (!res.ok) throw new Error(`prices fetch failed: ${res.status}`);
+        return res.json();
+      })
+      .then((data) => {
+        setPrices(data);
+        if (data) {
+          fetch(`${API_URL}/prices/${symbol}/returns?from=${yearsAgo(5)}&amount=100000`)
+            .then((res) => (res.ok ? res.json() : null))
+            .then(setReturns);
+        }
+      })
+      .catch(() => setError("Couldn't reach the backend. Is the API running?"));
+  }, [symbol]);
+
+  if (error) {
+    return (
+      <main style={{ padding: 24, fontFamily: "system-ui, sans-serif" }}>
+        <p style={{ color: "#b00" }}>{error}</p>
+      </main>
+    );
+  }
+
+  if (stock === undefined || prices === undefined) {
+    return (
+      <main style={{ padding: 24, fontFamily: "system-ui, sans-serif" }}>
+        <p>Loading...</p>
+      </main>
+    );
+  }
 
   if (!stock) {
     return (
@@ -115,8 +159,6 @@ export default async function StockPage({ params }: { params: Promise<{ symbol: 
       </main>
     );
   }
-
-  const prices = await getPrices(symbol);
 
   if (!prices) {
     return (
@@ -129,7 +171,6 @@ export default async function StockPage({ params }: { params: Promise<{ symbol: 
     );
   }
 
-  const returns = await getReturns(symbol, yearsAgo(5));
   const latestPriceDate = prices[prices.length - 1].date;
 
   return (
@@ -137,7 +178,7 @@ export default async function StockPage({ params }: { params: Promise<{ symbol: 
       <h1>{stock.name} ({stock.symbol})</h1>
       {stock.sector && <p style={{ color: "#666", marginTop: -8 }}>{stock.sector}</p>}
       <p style={{ fontSize: 12, color: "#666" }}>Prices as of {latestPriceDate}</p>
-      <PriceChart points={prices.map((p: PricePoint) => ({ date: p.date, close: p.close }))} />
+      <PriceChart points={prices.map((p) => ({ date: p.date, close: p.close }))} />
       <FundamentalsCard stock={stock} />
 
       {returns && (

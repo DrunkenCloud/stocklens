@@ -18,18 +18,18 @@ was cut) are the full v1 spec — start with [`00_OVERVIEW.md`](00_OVERVIEW.md).
 
 ## Stack
 
-- **Backend:** Python / FastAPI
+- **Backend:** Python / FastAPI (routes under `/api`)
 - **Database:** PostgreSQL
-- **Frontend:** Next.js (TypeScript)
+- **Frontend:** Vite + React + react-router (static SPA, no Node.js server needed in prod — see `06_DECISIONS.md` D10)
 - **Prices:** ICICI Direct Breeze API (`breeze-connect`) — see [`pipeline/README.md`](pipeline/README.md)
 - **Fundamentals:** Yahoo Finance (`yfinance`) — see [`06_DECISIONS.md`](06_DECISIONS.md) D8
-- **Deploy:** Docker Compose on an Azure VM, pipeline jobs via cron
+- **Deploy:** native processes on a small Azure VPS (not Docker — see D10), pipeline jobs via cron
 
 ## Running locally
 
 ```
 docker compose up --build
-curl localhost:8000/health   # {"status":"ok","companies":30}
+curl localhost:8000/api/health   # {"status":"ok","companies":30}
 ```
 
 Postgres schema (`db/schema.sql`) and seed companies (`db/seed.sql`) load

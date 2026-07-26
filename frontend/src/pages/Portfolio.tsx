@@ -1,8 +1,6 @@
-"use client";
-
 import { useEffect, useState } from "react";
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+import { Link } from "react-router-dom";
+import { API_URL } from "../api";
 
 type Holding = {
   id: string;
@@ -18,7 +16,7 @@ type Holding = {
   gain_pct: number | null;
 };
 
-type Portfolio = {
+type PortfolioData = {
   holdings: Holding[];
   total_cost_basis: number;
   total_current_value: number;
@@ -34,8 +32,8 @@ function fmtPct(v: number | null): string {
   return v === null ? "N/A" : `${v >= 0 ? "+" : ""}${v.toFixed(2)}%`;
 }
 
-export default function PortfolioPage() {
-  const [data, setData] = useState<Portfolio | null>(null);
+export default function Portfolio() {
+  const [data, setData] = useState<PortfolioData | null>(null);
   const [symbol, setSymbol] = useState("");
   const [quantity, setQuantity] = useState("");
   const [avgCost, setAvgCost] = useState("");
@@ -119,7 +117,7 @@ export default function PortfolioPage() {
               {data.holdings.map((h) => (
                 <tr key={h.id} style={{ borderBottom: "1px solid #eee" }}>
                   <td style={{ padding: 6 }}>
-                    <a href={`/stock/${h.symbol}`}>{h.symbol}</a>
+                    <Link to={`/stock/${h.symbol}`}>{h.symbol}</Link>
                   </td>
                   <td style={{ textAlign: "right", padding: 6 }}>{h.quantity}</td>
                   <td style={{ textAlign: "right", padding: 6 }}>{fmtRupee(h.avg_cost)}</td>

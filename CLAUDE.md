@@ -1,18 +1,19 @@
 # StockLens (working name)
 
 Personal NSE stock-evaluation tool: screener + fundamentals, historical returns,
-manual portfolio. FastAPI + PostgreSQL + Next.js, prices from ICICI Breeze API,
-fundamentals from a free scraper/API. No AI feature (cut — no Anthropic API
-budget, see `06_DECISIONS.md` D5).
+manual portfolio. FastAPI (routes under `/api`) + PostgreSQL + a Vite/React
+static SPA, prices from ICICI Breeze API, fundamentals from Yahoo Finance. No
+AI feature (cut — no Anthropic API budget, see `06_DECISIONS.md` D5).
 
 **Build order is `07_ROADMAP.md`** (M0 skeleton → M1 prices → M2 returns → …
 → M6 ship). Progress: M0–M5 are built - skeleton/DB, a Breeze pipeline
 verified live (all 30 seeded companies, real price history back to 2015),
 return math + `/prices` endpoints, fundamentals via yfinance (also verified
 live) + `/stocks` endpoints, a filterable/sortable screener, and manual
-portfolio CRUD (`/portfolio`, single fixed user - D9, no auth in v1). M6 is
-mostly done (cron wiring, staleness UI, error states); only the actual VM
-deploy is outstanding, pending the user's infra access.
+portfolio CRUD (`/portfolio`, single fixed user - D9, no auth in v1). M6:
+frontend switched from Next.js to Vite/React and deploy target from Docker
+to native processes (D10) once the VM's real memory budget (848MB) was known
+— currently mid-deploy to the user's Azure VPS.
 
 ## Read before building
 

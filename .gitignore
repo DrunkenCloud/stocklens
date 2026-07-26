@@ -11,10 +11,9 @@ __pycache__/
 venv/
 .pytest_cache/
 
-# Node / Next.js
+# Node / Vite
 node_modules/
-.next/
-out/
+dist/
 
 # Editors / OS
 .vscode/

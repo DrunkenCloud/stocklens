@@ -28,16 +28,16 @@
                                               │    FastAPI       │
                                               │   (backend)      │
                                               │                  │
-                                              │  /stocks         │
-                                              │  /screen         │
-                                              │  /prices         │
-                                              │  /portfolio      │
+                                              │  /api/stocks     │
+                                              │  /api/screen     │
+                                              │  /api/prices     │
+                                              │  /api/portfolio  │
                                               └─────────────────┘
                                                        ▲
                                                        │ HTTP/JSON
                                               ┌─────────────────┐
-                                              │   Next.js UI     │
-                                              │                  │
+                                              │  Vite/React SPA  │
+                                              │  (static files)  │
                                               │  Screener        │
                                               │  Stock detail    │
                                               │  Portfolio       │
@@ -58,70 +58,81 @@ FastAPI reads (plus writes for user-entered holdings). No second database — se
 `06_DECISIONS.md` on why ClickHouse is out.
 
 **FastAPI backend.**
-Read API over the stored data. Also handles manual holdings CRUD. Return
-calculations (CAGR, drawdown, etc.) live here as pure functions over `daily_prices`.
+Read API over the stored data, routes under `/api`. Also handles manual holdings
+CRUD. Return calculations (CAGR, drawdown, etc.) live here as pure functions over
+`daily_prices`.
 
-**Next.js frontend.**
-Three surfaces: screener (filter/rank table), stock detail (fundamentals + price
-chart), portfolio (manual entry + returns). Talks only to FastAPI.
+**Vite/React frontend.**
+A static SPA (no Node.js server needed in prod — `06_DECISIONS.md` D10). Three
+surfaces: screener (filter/rank table), stock detail (fundamentals + price
+chart), portfolio (manual entry + returns). Talks only to FastAPI, client-side.
 
 ## Data flow, end to end
 
 1. **Ingest (offline, scheduled):** pipeline pulls daily prices (Breeze) and
    fundamentals (free source) → normalizes → upserts into Postgres.
-2. **Browse/screen (request):** UI → `GET /screen?filters` → FastAPI queries
+2. **Browse/screen (request):** UI → `GET /api/screen?filters` → FastAPI queries
    `fundamentals` + latest `daily_prices` → ranked list back.
-3. **Stock detail (request):** UI → `GET /stocks/{symbol}` (fundamentals + price
+3. **Stock detail (request):** UI → `GET /api/stocks/{symbol}` (fundamentals + price
    series).
-4. **Returns (request):** UI → `GET /prices/{symbol}/returns?from=...&amount=...`
+4. **Returns (request):** UI → `GET /api/prices/{symbol}/returns?from=...&amount=...`
    → FastAPI computes CAGR / total return / drawdown from `daily_prices`.
-5. **Portfolio (request):** UI → `POST/GET /portfolio` → holdings stored in
+5. **Portfolio (request):** UI → `POST/GET /api/portfolio` → holdings stored in
    Postgres; returns computed against latest price per symbol.
 
-## Suggested repo layout
+## Repo layout (as built)
 
 ```
 stocklens/
 ├── pipeline/                  # standalone ingestion (not imported by API)
 │   ├── breeze_client.py       # auth flow + price fetch wrapper
-│   ├── fundamentals_source.py # scraper/API wrapper + normalization
+│   ├── fundamentals_source.py # yfinance wrapper + normalization
+│   ├── run_job.sh             # cron wrapper (repo-root-relative, venv-aware)
+│   ├── crontab.example
 │   ├── jobs/
-│   │   ├── refresh_universe.py
+│   │   ├── map_breeze_codes.py  # symbol -> Breeze stock_code (D3)
 │   │   ├── fetch_prices.py
 │   │   └── fetch_fundamentals.py
-│   ├── schedule.py            # cron-like runner
 │   └── README.md
+│   # refresh_universe.py not built - v1 uses hand-seeded companies (db/seed.sql)
 │
-├── backend/                   # FastAPI app
+├── backend/                   # FastAPI app, routes under /api
 │   ├── main.py
-│   ├── db.py                  # connection / session
-│   ├── models.py              # ORM models (or SQL + pydantic)
+│   ├── db.py                  # connection pool
 │   ├── routers/
 │   │   ├── stocks.py
 │   │   ├── screen.py
 │   │   ├── prices.py
-│   │   └── portfolio.py
+│   │   ├── portfolio.py
+│   │   └── breeze_auth.py     # session-capture callback (deploy-time addition)
 │   ├── services/
 │   │   └── returns.py         # CAGR, drawdown, etc. (pure functions)
 │   └── requirements.txt
 │
-├── frontend/                  # Next.js
-│   ├── app/ (or pages/)
-│   │   ├── screener/
-│   │   ├── stock/[symbol]/
-│   │   └── portfolio/
-│   └── components/
+├── frontend/                  # Vite + React + react-router (static SPA - D10)
+│   ├── src/
+│   │   ├── main.tsx / App.tsx
+│   │   ├── api.ts
+│   │   └── pages/
+│   │       ├── Screener.tsx
+│   │       ├── Portfolio.tsx
+│   │       └── StockDetail.tsx
+│   └── vite.config.ts
 │
 ├── db/
 │   ├── schema.sql             # from 05_SCHEMA_AND_API.md
-│   └── migrations/
+│   └── seed.sql                # companies + default user (D9)
 │
-├── docker-compose.yml         # postgres + backend (+ frontend)
+├── docker-compose.yml         # local dev only (postgres + backend)
 └── README.md                  # incl. the guardrail statement
 ```
 
 ## Deployment (v1)
 
-`docker-compose` with Postgres + FastAPI (and optionally the Next.js build) on the
-user's existing Azure VM. The pipeline can run as a cron job on the same box calling
-the job scripts. Nothing here needs managed cloud services for v1.
+Native processes on the user's existing Azure VM, not Docker — the VM's real
+memory budget (848MB total) ruled that out; see `06_DECISIONS.md` D10 for the
+full reasoning. Postgres via apt, the backend as a `systemctl --user` service,
+the frontend as a static build served by the VM's existing Caddy reverse
+proxy (which also fronts another app on the same box). The pipeline runs via
+cron calling the job scripts (`pipeline/run_job.sh`, `pipeline/crontab.example`).
+Docker Compose (`docker-compose.yml`) remains the local dev setup.
