@@ -15,8 +15,9 @@ def test_normalize_row():
     raw = {"datetime": "2026-07-15 00:00:00", "open": "100.5", "high": "102", "low": "99", "close": "101", "volume": "5000"}
     date, open_, high, low, close, volume = normalize_row(raw)
     assert date == dt.date(2026, 7, 15)
-    assert close == "101"  # normalize_row doesn't coerce types; DB column casts on insert
-    assert open_ == "100.5"
+    assert close == 101.0
+    assert open_ == 100.5
+    assert volume == 5000
 
 
 def test_normalize_row_missing_optional_fields():

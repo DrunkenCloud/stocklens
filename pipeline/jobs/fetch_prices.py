@@ -32,18 +32,23 @@ def incremental_from_date(last_date: dt.date | None, today: dt.date, backfill: b
 def normalize_row(raw: dict) -> tuple:
     """Pure: one Breeze historical-data record -> (date, open, high, low, close, volume).
 
-    ponytail: field names/format below are per the breeze-connect docs example;
-    unverified against a live response. If a real fetch fails to parse, this is
-    the one place to fix.
+    Field names and types (strings, e.g. "1291.9") confirmed against a live
+    get_historical_data response.
     """
     date_str = raw["datetime"][:10]
+
+    def num(key):
+        v = raw.get(key)
+        return float(v) if v is not None else None
+
+    volume = raw.get("volume")
     return (
         dt.date.fromisoformat(date_str),
-        raw.get("open"),
-        raw.get("high"),
-        raw.get("low"),
-        raw["close"],
-        raw.get("volume"),
+        num("open"),
+        num("high"),
+        num("low"),
+        float(raw["close"]),
+        int(volume) if volume is not None else None,
     )
 
 
@@ -97,10 +102,12 @@ def main() -> None:
         companies = cur.fetchall()
 
     for symbol, breeze_code in companies:
-        # ponytail: default breeze_code to the plain ticker (matches 03_PIPELINE.md's
-        # own example); verify real codes via Breeze's security master once you have
-        # portal access, and set companies.breeze_code for any that differ.
-        breeze_code = breeze_code or symbol
+        if not breeze_code:
+            # Breeze's stock_code often differs from the NSE ticker (confirmed live -
+            # e.g. M&M -> MAHMAH). Run map_breeze_codes.py first to populate this.
+            failures.append(symbol)
+            print(f"{symbol}: SKIPPED - no breeze_code set, run: python -m pipeline.jobs.map_breeze_codes")
+            continue
 
         with conn.cursor() as cur:
             cur.execute("SELECT max(date) FROM daily_prices WHERE symbol = %s", (symbol,))

@@ -6,8 +6,9 @@ fundamentals from a free scraper/API. No AI feature (cut — no Anthropic API
 budget, see `06_DECISIONS.md` D5).
 
 **Build order is `07_ROADMAP.md`** (M0 skeleton → M1 prices → M2 returns → …
-→ M6 ship). Progress: M0 (skeleton/DB) and M1 (Breeze client + `fetch_prices`
-job, untested against a live account — no Breeze credentials yet) are built.
+→ M6 ship). Progress: M0 (skeleton/DB), M1 (Breeze pipeline - verified live:
+82k+ real daily price rows backfilled for 29/30 seeded companies), and M2
+(return formulas + `/prices` endpoints + stock detail page) are built.
 
 ## Read before building
 

@@ -30,6 +30,24 @@ default `docker-compose.yml` port mapping that's
    Open that URL, log in, and copy the session token from the redirect URL into
    `BREEZE_API_SESSION` in `.env`.
 
+## map_breeze_codes
+
+Run once (and again any time you add a company): Breeze's internal `stock_code`
+often differs from the plain NSE ticker (confirmed live - e.g. `M&M` -> `MAHMAH`,
+`BAJAJFINSV` -> `BAFINS`, `RELIANCE` -> `RELIND`). This resolves and stores it on
+`companies.breeze_code` via Breeze's `get_names()`. `fetch_prices` skips any
+company with no `breeze_code` set rather than guessing.
+
+```
+python -m pipeline.jobs.map_breeze_codes
+```
+
+Known gap: `get_names()` can return a messy/ambiguous match for some symbols
+(company name and token fields show multiple concatenated instruments, e.g. a
+warrant alongside the equity) even though `isec_stock_code` itself came out
+clean in testing. Spot-check `companies.breeze_code` after running, especially
+for symbols with recent corporate actions (demergers, warrants, etc).
+
 ## fetch_prices
 
 ```
@@ -42,18 +60,9 @@ Self-check (pure logic, no live Breeze/DB needed):
 python -m pipeline.jobs.test_fetch_prices
 ```
 
-## Known unverified assumptions (flag before trusting real data)
-
-- **`breeze_code` mapping** — defaults to the plain NSE ticker per `03_PIPELINE.md`'s
-  own example. Breeze's real security-master codes may differ for some symbols;
-  verify once you have portal access and set `companies.breeze_code` for any that
-  do (`UPDATE companies SET breeze_code = '...' WHERE symbol = '...'`).
-- **Response field names** (`datetime`, `open`, `high`, `low`, `close`, `volume`)
-  in `normalize_row()` — copied from documented examples, not yet checked against
-  a live API response. If a real fetch throws a `KeyError`, this is the one
-  function to fix.
-- **Login URL pattern** in `breeze_client.login_url()` — standard Breeze pattern,
-  double-check against the current portal docs.
-
-Run `--backfill` for one symbol first and eyeball `daily_prices` before trusting
-a full-universe backfill.
+Verified against a live account: auth, `get_names` resolution, and a full
+`--backfill` for the 30 seeded companies (29 succeeded, 2015-01-01 through
+today, ~2,850 rows each). One known failure: `TATAMOTORS` - Breeze's
+`get_names()` returns "Result Not Found" for it, most likely because of a
+corporate action (demerger) changing what the ticker maps to. Not yet
+resolved; needs a manual look rather than a guessed fix.

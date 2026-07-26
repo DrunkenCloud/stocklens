@@ -15,8 +15,6 @@ from breeze_connect import BreezeConnect
 
 def login_url() -> str:
     api_key = os.environ["BREEZE_API_KEY"]
-    # ponytail: standard Breeze login URL pattern; verify against the current
-    # ICICI Breeze developer portal docs before relying on it.
     return f"https://api.icicidirect.com/apiuser/login?api_key={quote(api_key)}"
 
 
