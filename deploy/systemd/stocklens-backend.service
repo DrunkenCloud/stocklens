@@ -3,10 +3,11 @@ Description=StockLens API
 After=network-online.target
 
 [Service]
-WorkingDirectory=%h/projects/trading/backend
-EnvironmentFile=%h/projects/trading/.env
-ExecStart=%h/projects/trading/backend/.venv/bin/uvicorn main:app --host 127.0.0.1 --port 8000
+WorkingDirectory=%h/trading/backend
+EnvironmentFile=%h/trading/.env
+ExecStart=%h/trading/backend/.venv/bin/uvicorn main:app --host 127.0.0.1 --port 8000
 Restart=always
+KillMode=process
 RestartSec=5
 
 [Install]

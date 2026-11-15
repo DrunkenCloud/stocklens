@@ -2,7 +2,7 @@
 Description=StockLens: weekly fundamentals
 
 [Timer]
-OnCalendar=Sun 03:00
+OnCalendar=Sun 03:00 Asia/Kolkata
 Persistent=true
 Unit=stocklens-job@fetch_fundamentals.service
 

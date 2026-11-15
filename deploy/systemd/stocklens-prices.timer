@@ -2,7 +2,7 @@
 Description=StockLens: daily prices after market close
 
 [Timer]
-OnCalendar=Mon..Fri 19:00
+OnCalendar=Mon..Fri 19:00 Asia/Kolkata
 Persistent=true
 Unit=stocklens-job@fetch_prices.service
 

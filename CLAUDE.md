@@ -7,8 +7,8 @@ stock pages, a screener and a Data page for pipeline ops.
 
 FastAPI (`/api`) + PostgreSQL + Next.js static export. Prices from ICICI
 Breeze, fundamentals from Yahoo Finance, stock universe from ICICI's
-SecurityMaster file. Runs locally on the user's machine at https://investlens.duckdns.org
-(an `/etc/hosts` entry points the domain at 127.0.0.1; the old Azure VM deploy is retired).
+SecurityMaster file. Hosted on an Azure VM at https://investlens.duckdns.org behind a
+site-wide Caddy password. It has to run there: ICICI's API only accepts calls from the VM's IP.
 
 Area conventions: `backend/CLAUDE.md`, `pipeline/CLAUDE.md`, `frontend/CLAUDE.md`.
 
@@ -31,7 +31,8 @@ Area conventions: `backend/CLAUDE.md`, `pipeline/CLAUDE.md`, `frontend/CLAUDE.md
   holdings, auto-track new stocks, replace `source='icici_sync'` holdings, prices, missing fundamentals.
 - Tracking a stock (search → Track, or a manual holding for an untracked stock) inserts into
   `companies` and spawns `onboard` (fundamentals now, prices if the session is valid).
-- Timers (local time, IST): prices Mon–Fri 19:00, securities Sun 02:00, fundamentals Sun 03:00;
+- Timers (pinned to Asia/Kolkata; the VM clock is UTC): prices Mon–Fri 19:00, securities Sun 02:00,
+  fundamentals Sun 03:00;
   `Persistent=true` catches up after the machine was off. Jobs skip cleanly (exit 75, status
   `skipped`) without a valid session.
 
@@ -46,20 +47,20 @@ cd frontend && npm run dev
 venvs: `uv venv --python 3.12 pipeline/.venv && uv pip install --python pipeline/.venv/bin/python -r pipeline/requirements.txt`
 (same for backend).
 
-## Running it (this machine)
+## Deployment
 
-One-time: `bash deploy/setup.sh` (asks for sudo: installs Caddy, lets it bind 80/443, adds the
-`/etc/hosts` entry, enables Docker + user lingering, trusts Caddy's local CA).
+VM `ssh 135.235.195.168` (user `drunkencloud`, no passwordless sudo, repo at `~/trading`, Python 3.10:
+no 3.11+ syntax). Root-level changes live in `deploy/vm_root.sh`, which the user runs themselves:
+updates, fail2ban, sshd drop-in, ufw (22/80/443), Caddyfile with `basic_auth` on everything except
+`/api/cb/*`.
 
-- Postgres: docker compose `db` (`restart: unless-stopped`), port 5433.
-- `systemctl --user` units, symlinked from `deploy/systemd/` into `~/.config/systemd/user/`:
-  `stocklens-backend` (uvicorn 127.0.0.1:8000), `stocklens-caddy` (`deploy/Caddyfile`, `tls internal`,
-  serves `frontend/out` and proxies `/api/*`), `stocklens-job@<job>` + `stocklens-{prices,fundamentals,securities}.timer`.
-- After changes: backend → `systemctl --user restart stocklens-backend`; frontend →
-  `npm --prefix frontend run build` (Caddy serves the new `out/` immediately); migrations →
-  `pipeline/.venv/bin/python db/migrate.py`. Logs: `journalctl --user -u stocklens-backend`.
-- ICICI's registered redirect is `https://investlens.duckdns.org/api/cb/<BREEZE_CALLBACK_TOKEN>`;
-  the hosts entry makes the browser deliver it to this machine.
+- `bash deploy/deploy.sh` (no sudo): builds the frontend, rsyncs the repo (keeps the VM's `.env`,
+  venvs, logs) and `frontend/out/` → `~/trading/frontend/dist/`, runs migrations, links
+  `deploy/systemd/*` into `~/.config/systemd/user/`, enables the timers, restarts the backend.
+- Units: `stocklens-backend` (uvicorn 127.0.0.1:8000, `KillMode=process` so spawned jobs survive
+  restarts), `stocklens-job@<job>` + `stocklens-{prices,fundamentals,securities}.timer`.
+  Logs: `journalctl --user -u stocklens-backend`, run logs in `pipeline/logs/`.
+- Caddy is the system service with `/etc/caddy/Caddyfile`; edit the file, never only the admin API.
 
 ## Live-verified gotchas
 
