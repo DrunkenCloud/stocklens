@@ -4,11 +4,12 @@ import { ChevronDownIcon, ChevronRightIcon } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 
+import { DonutPanel, topSlices } from "@/components/charts/donut-panel";
 import { Panel, Segmented } from "@/components/panel";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SCOPES, useScope } from "@/hooks/use-scope";
-import { ASSET_CLASS, date, inr, inrCompact, pct } from "@/lib/format";
+import { ASSET_CLASS, date, inr, pct } from "@/lib/format";
 import { shortFundName } from "@/lib/holding";
 import { useExposure } from "@/lib/queries";
 import type { Exposure } from "@/lib/types";
@@ -21,27 +22,6 @@ function Figure({ label, value, sub }: { label: string; value: React.ReactNode; 
       <div className="num mt-1 truncate text-lg font-medium">{value}</div>
       {sub && <div className="num truncate text-xs text-muted-foreground">{sub}</div>}
     </div>
-  );
-}
-
-function Bars({ rows, color }: { rows: { label: string; value: number; pct: number | null; color?: string }[]; color?: string }) {
-  const max = Math.max(...rows.map((r) => r.pct ?? 0), 1);
-  return (
-    <ul className="num space-y-2.5">
-      {rows.map((r) => (
-        <li key={r.label}>
-          <div className="flex items-baseline justify-between gap-3 text-[13px]">
-            <span className="truncate">{r.label}</span>
-            <span className="shrink-0 text-muted-foreground">
-              {pct(r.pct, { digits: 1 })} <span className="text-[11px]">{inrCompact(r.value)}</span>
-            </span>
-          </div>
-          <div className="mt-1 h-1.5 rounded-full bg-muted">
-            <div className="h-full rounded-full" style={{ width: `${((r.pct ?? 0) / max) * 100}%`, background: r.color ?? color ?? "var(--foreground)" }} />
-          </div>
-        </li>
-      ))}
-    </ul>
   );
 }
 
@@ -130,11 +110,10 @@ export default function ExposurePage() {
     const top10 = data.companies.slice(0, 10).reduce((s, c) => s + (c.weight_pct ?? 0), 0);
     const largest = data.companies[0];
     const overlap = data.overlap[0];
-    const sectorRows = data.sectors.slice(0, 20).map((s) => ({ label: s.sector, value: s.value, pct: s.weight_pct }));
-    const rest = data.sectors.slice(20);
-    if (rest.length) {
-      sectorRows.push({ label: `${rest.length} other sectors`, value: rest.reduce((s, x) => s + x.value, 0), pct: rest.reduce((s, x) => s + (x.weight_pct ?? 0), 0) });
-    }
+    const sectorSlices = topSlices(data.sectors.map((x) => ({ key: x.sector, label: x.sector, value: x.value })), 10);
+    const assetSlices = topSlices(data.assets.map((a) => ({ key: a.asset, label: ASSET_CLASS[a.asset]?.label ?? a.asset, value: a.value, color: ASSET_CLASS[a.asset]?.color })), 8);
+    const KIND_LABEL: Record<string, string> = { stock: "Stocks held directly", etf: "ETFs", mf: "Mutual funds" };
+    const kindSlices = topSlices(Object.entries(data.by_kind).map(([k, v], i) => ({ key: k, label: KIND_LABEL[k] ?? k, value: v, color: ["#222222", "#e8a33d", "#387ed1"][i % 3] })), 5);
     body = (
       <div className="space-y-4">
         <section aria-label="Concentration summary" className="rounded-md border border-border bg-surface">
@@ -149,15 +128,13 @@ export default function ExposurePage() {
           </div>
         </section>
 
-        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_22rem]">
-          <Companies data={data} />
-          <div className="space-y-4">
-            <Panel title="Sectors"><Bars rows={sectorRows} color="var(--accent-blue)" /></Panel>
-            <Panel title="Asset mix">
-              <Bars rows={data.assets.map((a) => ({ label: ASSET_CLASS[a.asset]?.label ?? a.asset, value: a.value, pct: a.weight_pct, color: ASSET_CLASS[a.asset]?.color }))} />
-            </Panel>
-          </div>
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          <DonutPanel title="Asset mix" slices={assetSlices} />
+          <DonutPanel title="Sectors" slices={sectorSlices} />
+          <DonutPanel title="How you hold it" slices={kindSlices} />
         </div>
+
+        <Companies data={data} />
 
         <Panel title="Fund overlap" actions={<span className="text-[11px] text-muted-foreground">Share of the same stocks, by weight</span>}>
           {data.overlap.length === 0 ? (

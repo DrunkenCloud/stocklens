@@ -4,17 +4,16 @@ import { useState } from "react";
 
 import { Donut, type DonutSlice } from "@/components/charts/donut";
 import { Panel, Segmented } from "@/components/panel";
-import { ASSET_CLASS, brokerColor, inrCompact, pct } from "@/lib/format";
+import { ASSET_CLASS, CHART_COLORS, brokerColor, inrCompact, pct } from "@/lib/format";
 import type { Portfolio } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
-const SECTOR_COLORS = ["#387ed1", "#e8a33d", "#5367ff", "#0a9b6e", "#c2549d", "#7a8b99", "#d0743c", "#2aa3b5", "#8f6ed5", "#a0a0a0"];
 
 function sectorSlices(p: Portfolio): DonutSlice[] {
   const top = p.by_sector.slice(0, 9);
   const rest = p.by_sector.slice(9).reduce((s, x) => s + x.value, 0);
-  const slices = top.map((s, i) => ({ key: s.sector, label: s.sector, value: s.value, color: SECTOR_COLORS[i] }));
-  return rest > 0 ? [...slices, { key: "rest", label: "Others", value: rest, color: SECTOR_COLORS[9] }] : slices;
+  const slices = top.map((s, i) => ({ key: s.sector, label: s.sector, value: s.value, color: CHART_COLORS[i] }));
+  return rest > 0 ? [...slices, { key: "rest", label: "Others", value: rest, color: CHART_COLORS[10] }] : slices;
 }
 
 function brokerSlices(p: Portfolio): DonutSlice[] {

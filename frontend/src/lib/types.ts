@@ -100,6 +100,7 @@ export interface Exposure {
   overlap: { a: string; b: string; pct: number }[];
   coverage_pct: number | null;
   as_of: string[];
+  by_kind: Record<string, number>;
 }
 
 export interface Fund extends Omit<MfScheme, "held"> {

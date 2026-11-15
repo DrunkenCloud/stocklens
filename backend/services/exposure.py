@@ -98,6 +98,10 @@ def look_through(items: list[dict], portfolios: dict[str, list[dict]], industry_
             overlap.append({"a": a["label"], "b": b["label"], "pct": round(pct, 2)})
     overlap.sort(key=lambda o: -o["pct"])
 
+    by_kind: dict[str, float] = {}
+    for item in items:
+        add(by_kind, item["kind"], item["value"])
+
     ranked = sorted(companies.values(), key=lambda c: -c["total"])
     return {
         "total": total,
@@ -110,4 +114,5 @@ def look_through(items: list[dict], portfolios: dict[str, list[dict]], industry_
         "assets": [{"asset": a, "value": v, "weight_pct": _pct(v, total)} for a, v in sorted(assets.items(), key=lambda kv: -kv[1])],
         "overlap": overlap,
         "coverage_pct": _pct(covered_value, fund_value),
+        "by_kind": by_kind,
     }

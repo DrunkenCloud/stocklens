@@ -30,6 +30,7 @@ def test_companies_combine_direct_and_fund_exposure():
     assert (top["isin"], top["direct"], top["total"]) == ("INE040A01034", 1000.0, 1000.0 + 1200.0 + 500.0), top
     assert sorted((v["label"], v["value"]) for v in top["via"]) == [("Fund One", 1200.0), ("Fund Two", 500.0)], top
     assert close(top["weight_pct"], 2700.0 / 4500.0 * 100)
+    assert r["by_kind"] == {"stock": 1000.0, "mf": 3500.0}, r["by_kind"]
 
 
 def test_sectors_use_fund_industries_for_direct_stocks_and_mark_unknown_funds():

@@ -6,6 +6,7 @@ import { useMemo } from "react";
 
 import { useSize } from "@/hooks/use-size";
 import { pct } from "@/lib/format";
+import { cn } from "@/lib/utils";
 
 export interface TreemapItem {
   key: string;
@@ -41,8 +42,10 @@ export function Treemap({ items, height, cap }: { items: TreemapItem[]; height: 
         const w = tile.x1 - tile.x0;
         const h = tile.y1 - tile.y0;
         const { background, strong } = tileColor(item.change, cap);
-        const roomy = w > Math.max(64, item.label.length * 8 + 8) && h > 40;
-        const labelFits = w > item.label.length * 6.5 + 6 && h > 20;
+        const big = w > 90 && h > 46;
+        const showLabel = w > 22 && h > 13;
+        const showChange = w > 32 && h > 26;
+        const showSub = w > 96 && h > 64;
         return (
           <Link
             key={item.key}
@@ -51,9 +54,9 @@ export function Treemap({ items, height, cap }: { items: TreemapItem[]; height: 
             className="num absolute flex flex-col items-center justify-center overflow-hidden rounded-sm px-1 text-center outline-offset-[-2px] hover:brightness-110"
             style={{ left: tile.x0, top: tile.y0, width: w, height: h, background, color: strong ? "#fff" : "var(--foreground)" }}
           >
-            {labelFits && <span className={roomy ? "text-sm font-medium" : "text-[11px] font-medium"}>{item.label}</span>}
-            {roomy && <span className="text-xs opacity-90">{pct(item.change, { signed: true })}</span>}
-            {w > 120 && h > 72 && <span className="mt-0.5 text-[11px] opacity-75">{item.sublabel}</span>}
+            {showLabel && <span className={cn("block max-w-full truncate font-medium leading-tight", big ? "text-sm" : "text-[10px]")}>{item.label}</span>}
+            {showChange && <span className={cn("block max-w-full truncate leading-tight opacity-90", big ? "text-xs" : "text-[10px]")}>{pct(item.change, { signed: true })}</span>}
+            {showSub && <span className="mt-0.5 block max-w-full truncate text-[11px] opacity-75">{item.sublabel}</span>}
           </Link>
         );
       })}
