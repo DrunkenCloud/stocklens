@@ -18,6 +18,8 @@ export interface Holding {
   exchange: "NSE" | "BSE" | null;
   category?: string | null;
   realized?: number;
+  xirr: number | null;
+  dated: boolean;
   quantity: number;
   invested: number;
   broker: string;
@@ -79,9 +81,33 @@ export interface Fund extends Omit<MfScheme, "held"> {
   transactions: MfTransaction[];
 }
 
-export interface HistoryPoint {
-  date: string;
-  value: number;
+export interface Growth {
+  series: { date: string; invested: number; value: number }[];
+  excluded_count: number;
+  excluded_invested: number;
+}
+
+export interface StockTransaction {
+  id: string;
+  symbol: string;
+  broker: string;
+  kind: "buy" | "sell";
+  quantity: number;
+  price: number;
+  amount: number;
+  date: string | null;
+  note: string | null;
+}
+
+export interface StockTransactionInput {
+  symbol?: string;
+  isin?: string;
+  broker: string;
+  kind: "buy" | "sell";
+  quantity: number;
+  price: number;
+  date?: string | null;
+  note?: string | null;
 }
 
 export interface Portfolio {
@@ -94,21 +120,14 @@ export interface Portfolio {
     pnl_pct: number | null;
     day_change: number;
     day_change_pct: number | null;
+    xirr: number | null;
+    xirr_coverage_pct: number | null;
   };
   by_broker: { broker: string; invested: number; value: number; pnl: number | null; pnl_pct: number | null; count: number }[];
   by_sector: { sector: string; value: number; weight_pct: number }[];
   by_asset_class: { asset_class: AssetClass; value: number; weight_pct: number }[];
 }
 
-export interface HoldingInput {
-  symbol?: string;
-  isin?: string;
-  quantity: number;
-  invested: number;
-  broker: string;
-  buy_date?: string | null;
-  note?: string | null;
-}
 
 export type AssetClass = "equity" | "debt" | "gold" | "silver" | "hybrid" | "other";
 

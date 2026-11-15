@@ -7,96 +7,18 @@ from pydantic import BaseModel, Field
 
 from db import pool
 from jobs import spawn_job
-from services.mf import mf_positions
+from holdings import DEFAULT_USER_ID, load_ledger, scheme_label
+from services.ledger import positions
 
 router = APIRouter()
 
-DEFAULT_USER_ID = "00000000-0000-0000-0000-000000000001"
-MF_SECTOR = "Mutual funds"
-SPARK_POINTS = 30
 MIN_HISTORY_ROWS = 30
 
-TX_SQL = """
-SELECT id, code, broker, kind, units, amount, date, note, created_at
-FROM mf_transactions WHERE user_id = %s ORDER BY date NULLS FIRST, created_at
-"""
-
-
-def scheme_label(s: dict) -> str:
-    return f"{s['name']} ({s['plan']})" if s.get("plan") else s["name"]
-
-
-def _positions_or_400(transactions: list[dict]) -> dict:
+def _validate_ledger(conn) -> None:
     try:
-        return mf_positions(transactions)
+        positions(load_ledger(conn, "mf"))
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
-
-
-def mf_rows(conn) -> list[dict]:
-    positions = mf_positions(conn.execute(TX_SQL, (DEFAULT_USER_ID,)).fetchall())
-    if not positions:
-        return []
-    codes = sorted({code for code, _ in positions})
-    schemes = {s["code"]: s for s in conn.execute("SELECT * FROM mf_schemes WHERE code = ANY(%s)", (codes,))}
-    recent: dict[int, list[tuple[dt.date, float]]] = {}
-    for r in conn.execute(
-        """
-        SELECT code, date, nav::float AS nav FROM (
-            SELECT code, date, nav, row_number() OVER (PARTITION BY code ORDER BY date DESC) AS rn
-            FROM mf_nav WHERE code = ANY(%s)
-        ) t WHERE rn <= %s ORDER BY code, date
-        """,
-        (codes, SPARK_POINTS),
-    ):
-        recent.setdefault(r["code"], []).append((r["date"], r["nav"]))
-
-    rows = []
-    for (code, broker), pos in sorted(positions.items()):
-        s = schemes[code]
-        navs = recent.get(code, [])
-        rows.append({
-            "id": f"mf:{code}:{broker}",
-            "symbol": str(code),
-            "name": scheme_label(s),
-            "sector": MF_SECTOR,
-            "kind": "mf",
-            "asset_class": s["asset_class"],
-            "exchange": None,
-            "category": s["category"],
-            "quantity": pos["units"],
-            "invested": pos["invested"],
-            "realized": pos["realized"],
-            "broker": broker,
-            "source": "manual",
-            "buy_date": None,
-            "note": None,
-            "close": navs[-1][1] if navs else (float(s["nav"]) if s["nav"] is not None else None),
-            "prev_close": navs[-2][1] if len(navs) > 1 else None,
-            "price_date": navs[-1][0] if navs else s["nav_date"],
-            "spark": [n for _, n in navs],
-        })
-    return rows
-
-
-def mf_history(conn, since: dt.date) -> dict[dt.date, float]:
-    positions = mf_positions(conn.execute(TX_SQL, (DEFAULT_USER_ID,)).fetchall())
-    units: dict[int, float] = {}
-    for (code, _), pos in positions.items():
-        units[code] = units.get(code, 0.0) + pos["units"]
-    if not units:
-        return {}
-    points = conn.execute(
-        "SELECT code, date, nav::float AS nav FROM mf_nav WHERE code = ANY(%s) AND date >= %s ORDER BY date",
-        (list(units), since - dt.timedelta(days=10)),
-    ).fetchall()
-    latest: dict[int, float] = {}
-    series: dict[dt.date, float] = {}
-    for p in points:
-        latest[p["code"]] = p["nav"]
-        if p["date"] >= since and len(latest) == len(units):
-            series[p["date"]] = sum(units[c] * nav for c, nav in latest.items())
-    return series
 
 
 @router.get("/mf/search")
@@ -143,7 +65,7 @@ class TransactionIn(BaseModel):
 
 
 def _check_and_backfill(conn, code: int) -> None:
-    _positions_or_400(conn.execute(TX_SQL, (DEFAULT_USER_ID,)).fetchall())
+    _validate_ledger(conn)
     if conn.execute("SELECT count(*) AS n FROM mf_nav WHERE code = %s", (code,)).fetchone()["n"] < MIN_HISTORY_ROWS:
         spawn_job("refresh_mf", ["--codes", str(code)], trigger="auto")
 
@@ -186,4 +108,4 @@ def delete_transaction(tx_id: uuid.UUID):
         result = conn.execute("DELETE FROM mf_transactions WHERE id = %s AND user_id = %s", (str(tx_id), DEFAULT_USER_ID))
         if result.rowcount == 0:
             raise HTTPException(status_code=404, detail="Entry not found")
-        _positions_or_400(conn.execute(TX_SQL, (DEFAULT_USER_ID,)).fetchall())
+        _validate_ledger(conn)

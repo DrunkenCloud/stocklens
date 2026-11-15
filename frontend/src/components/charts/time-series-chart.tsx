@@ -1,6 +1,6 @@
 "use client";
 
-import { AreaSeries, ColorType, CrosshairMode, LineStyle, createChart, type Time } from "lightweight-charts";
+import { AreaSeries, ColorType, CrosshairMode, LineSeries, LineStyle, LineType, createChart, type Time } from "lightweight-charts";
 import { useEffect, useRef } from "react";
 
 import { useThemeColors, withAlpha } from "@/hooks/use-theme-colors";
@@ -12,9 +12,10 @@ export interface SeriesPoint {
 }
 
 export function TimeSeriesChart({
-  data, height = 280, reference, onHover, formatPrice = inrCompact,
+  data, secondary, height = 280, reference, onHover, formatPrice = inrCompact,
 }: {
   data: SeriesPoint[];
+  secondary?: SeriesPoint[];
   height?: number;
   reference?: { value: number; label: string } | null;
   onHover?: (point: SeriesPoint | null) => void;
@@ -65,6 +66,18 @@ export function TimeSeriesChart({
       crosshairMarkerBorderColor: colors["--surface"],
     });
     series.setData(data.map((d) => ({ time: d.time as Time, value: d.value })));
+    if (secondary?.length) {
+      const line = chart.addSeries(LineSeries, {
+        color: colors["--muted-foreground"],
+        lineWidth: 1,
+        lineType: LineType.WithSteps,
+        lineStyle: LineStyle.Dashed,
+        priceLineVisible: false,
+        lastValueVisible: false,
+        crosshairMarkerVisible: false,
+      });
+      line.setData(secondary.map((d) => ({ time: d.time as Time, value: d.value })));
+    }
     if (reference) {
       series.createPriceLine({
         price: reference.value,
@@ -81,7 +94,7 @@ export function TimeSeriesChart({
       hoverRef.current?.(param.time && point?.value !== undefined ? { time: String(param.time), value: point.value } : null);
     });
     return () => chart.remove();
-  }, [data, colors, rising, reference]);
+  }, [data, secondary, colors, rising, reference]);
 
   return <div ref={container} style={{ height }} className="w-full" />;
 }

@@ -51,13 +51,13 @@ def test_v1_holding_survives_upgrade(url):
         )
         conn.commit()
         apply_migrations(conn)
-        rows = conn.execute("SELECT quantity, invested, broker, source FROM holdings ORDER BY quantity DESC").fetchall()
-        assert [(float(q), float(i), b, s) for q, i, b, s in rows] == [
-            (10.0, 1000.0, "Zerodha", "manual"),
-            (2.0, 100.0, "Other", "manual"),
+        rows = conn.execute("SELECT quantity, price, broker, kind FROM stock_transactions ORDER BY quantity DESC").fetchall()
+        assert [(float(q), float(p), b, k) for q, p, b, k in rows] == [
+            (10.0, 100.0, "Zerodha", "buy"),
+            (2.0, 50.0, "Other", "buy"),
         ], rows
-        cols = {r[0] for r in conn.execute("SELECT column_name FROM information_schema.columns WHERE table_name='holdings'")}
-        assert "avg_cost" not in cols and "account" not in cols, cols
+        tables = {r[0] for r in conn.execute("SELECT tablename FROM pg_tables WHERE schemaname='public'")}
+        assert "holdings" not in tables, tables
 
 
 if __name__ == "__main__":

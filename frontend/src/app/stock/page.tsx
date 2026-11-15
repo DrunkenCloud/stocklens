@@ -1,18 +1,20 @@
 "use client";
 
+import { PencilIcon, PlusIcon } from "lucide-react";
 import { useSearchParams } from "next/navigation";
-import { Suspense, useMemo } from "react";
+import { Suspense, useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import { RangeBar } from "@/components/charts/range-bar";
 import { Panel } from "@/components/panel";
+import { StockEntryForm, type StockEntryTarget } from "@/components/portfolio/stock-entry-form";
 import { Fundamentals } from "@/components/stock/fundamentals";
 import { PricePanel } from "@/components/stock/price-panel";
 import { ReturnsPanel } from "@/components/stock/returns-panel";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { brokerColor, date, inr, num, pct, qty, tone } from "@/lib/format";
-import { usePortfolio, usePrices, useSecuritySearch, useStock, useTrack } from "@/lib/queries";
+import { usePortfolio, usePrices, useSecuritySearch, useStock, useStockEntries, useTrack } from "@/lib/queries";
 import type { PricePoint, Stock } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -71,9 +73,60 @@ function Tracked({ stock }: { stock: Stock }) {
         <Position symbol={stock.symbol} />
       </div>
 
+      <Entries symbol={stock.symbol} name={stock.name} isin={stock.isin} />
       <Fundamentals data={stock.fundamentals} />
       <ReturnsPanel symbol={stock.symbol} />
     </div>
+  );
+}
+
+function Entries({ symbol, name, isin }: { symbol: string; name: string; isin: string | null }) {
+  const { data: entries } = useStockEntries(symbol);
+  const [form, setForm] = useState<{ open: boolean; target: StockEntryTarget }>({ open: false, target: {} });
+  const stock = { name, symbol, isin: isin ?? undefined };
+  return (
+    <Panel
+      title="Your entries"
+      actions={<Button size="sm" variant="outline" onClick={() => setForm({ open: true, target: { stock } })}><PlusIcon /> Add entry</Button>}
+      bodyClassName="p-0"
+    >
+      {!entries?.length ? (
+        <p className="p-8 text-center text-sm text-muted-foreground">No entries. Add a purchase to start tracking {symbol}.</p>
+      ) : (
+        <table className="num w-full text-[13px]">
+          <thead>
+            <tr className="border-b border-border text-left text-muted-foreground">
+              <th className="py-2 pl-4 font-normal">Date</th>
+              <th className="px-3 py-2 font-normal">Held at</th>
+              <th className="px-3 py-2 font-normal">Type</th>
+              <th className="px-3 py-2 text-right font-normal">Shares</th>
+              <th className="px-3 py-2 text-right font-normal">Price</th>
+              <th className="hidden px-3 py-2 text-right font-normal sm:table-cell">Total</th>
+              <th className="w-10"><span className="sr-only">Edit</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            {entries.map((t) => (
+              <tr key={t.id} className="border-b border-border/70 last:border-0">
+                <td className="py-2 pl-4">{t.date ? date(t.date) : <span className="text-muted-foreground">Not set</span>}</td>
+                <td className="px-3 py-2">{t.broker}</td>
+                <td className={cn("px-3 py-2", t.kind === "sell" && "text-loss")}>{t.kind === "buy" ? "Bought" : "Sold"}</td>
+                <td className="px-3 py-2 text-right">{qty(t.quantity)}</td>
+                <td className="px-3 py-2 text-right">{inr(t.price, { precise: true })}</td>
+                <td className="hidden px-3 py-2 text-right sm:table-cell">{inr(t.amount, { precise: true })}</td>
+                <td className="pr-2 text-right">
+                  <button type="button" onClick={() => setForm({ open: true, target: { stock, entry: t } })} aria-label="Edit entry"
+                    className="rounded p-1.5 text-text-tertiary hover:bg-muted hover:text-foreground">
+                    <PencilIcon className="size-3.5" />
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+      <StockEntryForm open={form.open} onOpenChange={(open) => setForm((f) => ({ ...f, open }))} target={form.target} />
+    </Panel>
   );
 }
 

@@ -42,6 +42,6 @@ async def breeze_callback(token: str, request: Request):
 
     return HTMLResponse(
         '<!doctype html><meta http-equiv="refresh" content="1;url=/">'
-        "<body style=\"font-family:system-ui;padding:2rem\">ICICI connected - syncing your holdings. "
+        "<body style=\"font-family:system-ui;padding:2rem\">ICICI connected - updating prices. "
         'Taking you back to <a href="/">StockLens</a>…</body>'
     )

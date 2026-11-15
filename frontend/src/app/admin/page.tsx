@@ -14,12 +14,13 @@ import type { JobRun, JobStatus } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 const JOBS: Record<string, { label: string; detail: string }> = {
-  sync_icici: { label: "Sync ICICI", detail: "Pull ICICI holdings, then update prices and missing fundamentals." },
+  sync_icici: { label: "Update after login", detail: "Fetch prices and any missing fundamentals. Needs today's ICICI login." },
   fetch_prices: { label: "Update prices", detail: "Fetch new daily prices for every tracked stock." },
   fetch_fundamentals: { label: "Update fundamentals", detail: "Refresh ratios from Yahoo Finance for every tracked stock." },
   refresh_securities: { label: "Refresh stock list", detail: "Re-download ICICI's list of NSE and BSE stocks used by search." },
   fetch_prices_backfill: { label: "Reload price history", detail: "Re-download full daily history since 2015. Takes a while." },
   onboard: { label: "Load new stock", detail: "" },
+  refresh_mf: { label: "Update fund NAVs", detail: "Load every mutual fund's latest NAV from AMFI and fill in history for your funds." },
 };
 
 const STATUS_STYLE: Record<JobStatus, string> = {
@@ -30,9 +31,9 @@ const STATUS_STYLE: Record<JobStatus, string> = {
 };
 
 const SESSION_TEXT = {
-  valid: "Connected for today. Holdings and prices sync automatically.",
-  expired: "Today's session has expired or hasn't started. Log in to sync.",
-  never: "Not connected yet. Log in once a day to sync ICICI holdings and prices.",
+  valid: "Connected for today. Prices update automatically.",
+  expired: "Today's session has expired or hasn't started. Log in to update prices.",
+  never: "Not connected yet. Log in once a day so prices can update.",
 };
 
 function duration(run: JobRun) {

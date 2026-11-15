@@ -5,13 +5,14 @@ import { useEffect, useRef } from "react";
 
 import { api } from "@/lib/api";
 import type {
-  Company, Fund, HistoryPoint, HoldingInput, JobRun, MfScheme, MfTransactionInput, Portfolio, Scope, PricePoint, Returns, ScreenRow, Security, Status, Stock,
+  Company, Fund, Growth, JobRun, MfScheme, MfTransactionInput, Portfolio, Scope, StockTransaction, StockTransactionInput, PricePoint, Returns, ScreenRow, Security, Status, Stock,
 } from "@/lib/types";
 
 export const keys = {
   status: ["status"] as const,
   portfolio: (scope: Scope) => ["portfolio", scope] as const,
-  history: (days: number, scope: Scope) => ["history", days, scope] as const,
+  growth: (days: number, scope: Scope) => ["growth", days, scope] as const,
+  entries: (symbol: string) => ["entries", symbol] as const,
   mfSearch: (q: string) => ["mf-search", q] as const,
   fund: (code: number) => ["fund", code] as const,
   search: (q: string) => ["search", q] as const,
@@ -43,10 +44,10 @@ export function useStatus() {
 export const usePortfolio = (scope: Scope = "all") =>
   useQuery({ queryKey: keys.portfolio(scope), queryFn: () => api<Portfolio>(`/portfolio?scope=${scope}`), placeholderData: keepPreviousData });
 
-export const usePortfolioHistory = (days: number, scope: Scope = "all") =>
+export const usePortfolioGrowth = (days: number, scope: Scope = "all") =>
   useQuery({
-    queryKey: keys.history(days, scope),
-    queryFn: () => api<HistoryPoint[]>(`/portfolio/history?days=${days}&scope=${scope}`),
+    queryKey: keys.growth(days, scope),
+    queryFn: () => api<Growth>(`/portfolio/growth?days=${days}&scope=${scope}`),
     placeholderData: keepPreviousData,
   });
 
@@ -139,18 +140,27 @@ function useInvalidateAll() {
   return () => qc.invalidateQueries();
 }
 
-export function useSaveHolding() {
+export const useStockEntries = (symbol: string) =>
+  useQuery({
+    queryKey: keys.entries(symbol),
+    queryFn: () => api<StockTransaction[]>(`/stock-transactions?symbol=${encodeURIComponent(symbol)}`),
+    enabled: !!symbol,
+  });
+
+export function useSaveStockTx() {
   const done = useInvalidateAll();
   return useMutation({
-    mutationFn: ({ id, input }: { id?: string; input: HoldingInput }) =>
-      id ? api(`/portfolio/${id}`, { method: "PUT", json: input }) : api<{ symbol: string; newly_tracked: boolean }>("/portfolio", { method: "POST", json: input }),
+    mutationFn: ({ id, input }: { id?: string; input: StockTransactionInput }) =>
+      id
+        ? api(`/stock-transactions/${id}`, { method: "PUT", json: input })
+        : api<{ symbol: string; newly_tracked: boolean }>("/stock-transactions", { method: "POST", json: input }),
     onSuccess: done,
   });
 }
 
-export function useDeleteHolding() {
+export function useDeleteStockTx() {
   const done = useInvalidateAll();
-  return useMutation({ mutationFn: (id: string) => api(`/portfolio/${id}`, { method: "DELETE" }), onSuccess: done });
+  return useMutation({ mutationFn: (id: string) => api(`/stock-transactions/${id}`, { method: "DELETE" }), onSuccess: done });
 }
 
 export function useTrack() {

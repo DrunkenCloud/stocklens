@@ -11,7 +11,7 @@ import { brokerColor, inr, num, pct, qty, tone } from "@/lib/format";
 import { holdingHref, holdingTitle } from "@/lib/holding";
 import { cn } from "@/lib/utils";
 
-type SortKey = "name" | "quantity" | "avg_cost" | "close" | "invested" | "value" | "pnl" | "pnl_pct" | "day_change_pct";
+type SortKey = "name" | "quantity" | "avg_cost" | "close" | "invested" | "value" | "pnl" | "pnl_pct" | "day_change_pct" | "xirr";
 
 const COLUMNS: { key: SortKey; label: string; align?: "right" }[] = [
   { key: "name", label: "Instrument" },
@@ -23,6 +23,7 @@ const COLUMNS: { key: SortKey; label: string; align?: "right" }[] = [
   { key: "pnl", label: "P&L", align: "right" },
   { key: "pnl_pct", label: "Net chg", align: "right" },
   { key: "day_change_pct", label: "Day chg", align: "right" },
+  { key: "xirr", label: "XIRR", align: "right" },
 ];
 
 
@@ -127,9 +128,10 @@ export function HoldingsTable({ holdings, onEdit, addAction }: { holdings: Holdi
                 <td className={cn("px-3 py-2 text-right", tone(h.pnl))}>{inr(h.pnl, { precise: true, signed: true })}</td>
                 <td className={cn("px-3 py-2 text-right", tone(h.pnl_pct))}>{pct(h.pnl_pct, { signed: true })}</td>
                 <td className={cn("px-3 py-2 text-right", tone(h.day_change_pct))}>{pct(h.day_change_pct, { signed: true })}</td>
+                <td className={cn("px-3 py-2 text-right", tone(h.xirr))} title={h.dated ? undefined : "Add purchase dates to see XIRR"}>{pct(h.xirr, { signed: true })}</td>
                 <td className="px-3 py-1 text-right"><Sparkline values={h.spark} /></td>
                 <td className="pr-2 text-right">
-                  {h.source === "manual" && (
+                  {(
                     <button type="button" onClick={() => onEdit(h)} aria-label={`Edit ${holdingTitle(h)} at ${h.broker}`}
                       className="rounded p-1.5 text-text-tertiary opacity-0 group-hover:opacity-100 hover:bg-muted hover:text-foreground focus-visible:opacity-100">
                       <PencilIcon className="size-3.5" />
@@ -146,7 +148,7 @@ export function HoldingsTable({ holdings, onEdit, addAction }: { holdings: Holdi
               <td className="px-3 py-2.5 text-right">{inr(totals.value, { precise: true })}</td>
               <td className={cn("px-3 py-2.5 text-right", tone(totals.pnl))}>{inr(totals.pnl, { precise: true, signed: true })}</td>
               <td className={cn("px-3 py-2.5 text-right", tone(totals.pnlPct))}>{pct(totals.pnlPct, { signed: true })}</td>
-              <td colSpan={3} />
+              <td colSpan={4} />
             </tr>
           </tfoot>
         </table>

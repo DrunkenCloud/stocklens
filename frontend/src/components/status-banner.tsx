@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { openIciciLogin, useStatus } from "@/lib/queries";
 
 const JOB_LABELS: Record<string, string> = {
-  sync_icici: "Syncing your ICICI holdings and prices",
+  sync_icici: "Updating prices after your ICICI login",
   fetch_prices: "Updating prices",
   fetch_fundamentals: "Updating company fundamentals",
   refresh_securities: "Refreshing the list of listed stocks",
@@ -45,7 +45,7 @@ export function StatusBanner() {
       <Strip tone="warn">
         <span className="flex-1">
           {status.breeze.state === "never" ? "ICICI isn't connected yet." : "Today's ICICI login has expired or hasn't happened yet."}{" "}
-          Log in to sync your ICICI holdings and today&apos;s prices.
+          Log in to ICICI to update today&apos;s prices.
         </span>
         <Button size="sm" onClick={loginToIcici}>Log in to ICICI</Button>
       </Strip>
@@ -55,9 +55,9 @@ export function StatusBanner() {
     return (
       <Strip tone="warn">
         <span className="flex-1">
-          {status.last_sync.summary?.startsWith("synced")
-            ? `ICICI holdings synced, but some data didn't update (${status.last_sync.summary.split("; ").slice(1).join(", ")}).`
-            : `The last ICICI sync failed: ${status.last_sync.summary ?? "no details"}`}
+          {status.last_sync.summary?.startsWith("updated after login")
+            ? `Prices updated after your ICICI login, but not everything (${status.last_sync.summary.split("; ").slice(1).join(", ")}).`
+            : `The last update after ICICI login failed: ${status.last_sync.summary ?? "no details"}`}
         </span>
         <Link href="/admin" className="font-medium underline underline-offset-4">See details</Link>
       </Strip>
