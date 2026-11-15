@@ -68,7 +68,7 @@ const BROKER_COLORS: Record<string, string> = {
   Groww: "var(--broker-groww)",
 };
 
-export const CHART_COLORS = ["#387ed1", "#e8a33d", "#5367ff", "#0a9b6e", "#c2549d", "#7a8b99", "#d0743c", "#2aa3b5", "#8f6ed5", "#b5a642", "#a0a0a0"];
+export const CHART_COLORS = ["#387ed1", "#e8a33d", "#5367ff", "#0a9b6e", "#c2549d", "#7a8b99", "#d0743c", "#2aa3b5", "#8f6ed5", "#b5a642", "#4f9d69", "#d4568a", "#8a6d3b", "#3fa7a0", "#9c7fd6", "#a0a0a0"];
 
 export const ASSET_CLASS: Record<string, { label: string; color: string }> = {
   equity: { label: "Equity", color: "#387ed1" },

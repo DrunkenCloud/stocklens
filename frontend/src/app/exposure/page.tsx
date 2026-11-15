@@ -110,7 +110,7 @@ export default function ExposurePage() {
     const top10 = data.companies.slice(0, 10).reduce((s, c) => s + (c.weight_pct ?? 0), 0);
     const largest = data.companies[0];
     const overlap = data.overlap[0];
-    const sectorSlices = topSlices(data.sectors.map((x) => ({ key: x.sector, label: x.sector, value: x.value })), 10);
+    const sectorSlices = topSlices(data.sectors.map((x) => ({ key: x.sector, label: x.sector, value: x.value })), 14);
     const assetSlices = topSlices(data.assets.map((a) => ({ key: a.asset, label: ASSET_CLASS[a.asset]?.label ?? a.asset, value: a.value, color: ASSET_CLASS[a.asset]?.color })), 8);
     const KIND_LABEL: Record<string, string> = { stock: "Stocks held directly", etf: "ETFs", mf: "Mutual funds" };
     const kindSlices = topSlices(Object.entries(data.by_kind).map(([k, v], i) => ({ key: k, label: KIND_LABEL[k] ?? k, value: v, color: ["#222222", "#e8a33d", "#387ed1"][i % 3] })), 5);
