@@ -1,3 +1,4 @@
+# Local dev Postgres only. Schema: python db/migrate.py --seed
 services:
   db:
     image: postgres:16
@@ -7,8 +8,6 @@ services:
       POSTGRES_DB: stocklens
     volumes:
       - pgdata:/var/lib/postgresql/data
-      - ./db/schema.sql:/docker-entrypoint-initdb.d/1_schema.sql
-      - ./db/seed.sql:/docker-entrypoint-initdb.d/2_seed.sql
     ports:
       - "5433:5432"
     healthcheck:
@@ -17,16 +16,6 @@ services:
       timeout: 5s
       retries: 10
 
-  api:
-    build: ./backend
-    environment:
-      DATABASE_URL: postgresql://stocklens:stocklens@db:5432/stocklens
-      BREEZE_API_KEY: ${BREEZE_API_KEY:-}
-    ports:
-      - "8000:8000"
-    depends_on:
-      db:
-        condition: service_healthy
 
 volumes:
   pgdata:

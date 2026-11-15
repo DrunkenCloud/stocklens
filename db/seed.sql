@@ -1,6 +1,6 @@
--- Seed companies: a starter set of well-known NSE (NIFTY-50-ish) symbols.
--- Real universe comes from the refresh_universe pipeline job later (M1+).
--- breeze_code left NULL; mapped when the Breeze client is built.
+-- Starter watchlist: well-known NSE (NIFTY-50-ish) symbols. Applied by
+-- `python db/migrate.py --seed`; idempotent. breeze_code/isin get filled in by
+-- the refresh_securities job.
 
 INSERT INTO companies (symbol, name, sector) VALUES
     ('RELIANCE',   'Reliance Industries Ltd',          'Energy'),
@@ -30,7 +30,7 @@ INSERT INTO companies (symbol, name, sector) VALUES
     ('TATASTEEL',  'Tata Steel Ltd',                     'Metals'),
     -- TATAMOTORS demerged (2025) into two separately-listed NSE symbols;
     -- the old ticker is gone, confirmed by both Breeze and Yahoo Finance
-    -- returning "not found" for it (pipeline/README.md).
+    -- returning "not found" for it.
     ('TMCV',       'Tata Motors Ltd (Commercial Vehicles)', 'Automobile'),
     ('TMPV',       'Tata Motors Passenger Vehicles Ltd',    'Automobile'),
     ('ADANIENT',   'Adani Enterprises Ltd',             'Diversified'),
@@ -39,7 +39,3 @@ INSERT INTO companies (symbol, name, sector) VALUES
     ('BAJAJFINSV', 'Bajaj Finserv Ltd',                 'Financials')
 ON CONFLICT (symbol) DO NOTHING;
 
--- Single default user (v1 is single-user, no auth - see 06_DECISIONS.md).
--- Fixed id so the backend can reference it without a lookup.
-INSERT INTO users (id) VALUES ('00000000-0000-0000-0000-000000000001')
-ON CONFLICT (id) DO NOTHING;

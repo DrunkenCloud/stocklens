@@ -1,6 +1,8 @@
--- StockLens schema. See 05_SCHEMA_AND_API.md for the annotated version.
+-- v1 schema as deployed (Jul 2026). IF NOT EXISTS everywhere so this is a no-op on the
+-- existing prod database, which predates migrations.
 
--- Tracked NSE universe. Written by refresh_universe job.
+
+-- Tracked NSE universe.
 CREATE TABLE IF NOT EXISTS companies (
     symbol        TEXT PRIMARY KEY,          -- NSE ticker, e.g. 'RELIANCE'
     name          TEXT NOT NULL,
@@ -63,3 +65,8 @@ CREATE TABLE IF NOT EXISTS holdings (
     created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 CREATE INDEX IF NOT EXISTS idx_holdings_user ON holdings (user_id);
+
+-- Single default user (the app is single-user, no auth). Fixed id so the backend
+-- can reference it without a lookup.
+INSERT INTO users (id) VALUES ('00000000-0000-0000-0000-000000000001')
+ON CONFLICT (id) DO NOTHING;
