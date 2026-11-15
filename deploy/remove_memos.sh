@@ -37,7 +37,8 @@ investlens.duckdns.org {
 
 	handle {
 		root * $HOME/trading/frontend/dist
-		# {path}.html / {path}/index.html: static-export page files; /index.html: SPA fallback
+		# frontend builds with trailingSlash: true, so pages are <route>/index.html;
+		# /index.html is the fallback for unknown paths.
 		try_files {path} {path}.html {path}/index.html /index.html
 		file_server
 	}
