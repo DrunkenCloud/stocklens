@@ -16,7 +16,7 @@ export function inrCompact(v: number | null | undefined): string {
   if (v === null || v === undefined) return DASH;
   const a = Math.abs(v);
   const sign = v < 0 ? "−" : "";
-  if (a >= 1e7) return `${sign}₹${(a / 1e7).toFixed(a >= 1e9 ? 0 : 2)} Cr`;
+  if (a >= 1e7) return `${sign}₹${(a / 1e7).toLocaleString("en-IN", { maximumFractionDigits: a >= 1e9 ? 0 : 2, minimumFractionDigits: a >= 1e9 ? 0 : 2 })} Cr`;
   if (a >= 1e5) return `${sign}₹${(a / 1e5).toFixed(2)} L`;
   return `${sign}${inrFull.format(a)}`;
 }
