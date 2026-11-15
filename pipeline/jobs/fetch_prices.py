@@ -6,6 +6,7 @@ import time
 from pipeline.breeze_client import SessionExpired, check_response, get_client, is_session_error
 from pipeline.db import connect
 from pipeline.run import SKIPPED_EXIT
+from pipeline.splits import detect_splits
 
 BACKFILL_START = dt.date(2015, 1, 1)
 RETRIES = 3
@@ -97,6 +98,24 @@ def upsert_rows(conn, symbol: str, rows: list[dict]) -> None:
     conn.commit()
 
 
+def adjust_splits(conn, symbols: list[str]) -> None:
+    for symbol in symbols:
+        closes = [(d, float(c)) for d, c in conn.execute(
+            "SELECT date, close FROM daily_prices WHERE symbol = %s ORDER BY date", (symbol,)
+        )]
+        for day, factor in detect_splits(closes):
+            conn.execute(
+                """
+                UPDATE daily_prices SET open = open / %(f)s, high = high / %(f)s, low = low / %(f)s,
+                    close = close / %(f)s, volume = volume * %(f)s
+                WHERE symbol = %(s)s AND date < %(d)s
+                """,
+                {"f": factor, "s": symbol, "d": day},
+            )
+            print(f"{symbol}: adjusted prices before {day} for a 1:{factor} split/bonus")
+        conn.commit()
+
+
 def run(symbols: list[str] | None = None, backfill: bool = False) -> list[str]:
     client = get_client()
     today = dt.date.today()
@@ -133,6 +152,8 @@ def run(symbols: list[str] | None = None, backfill: bool = False) -> list[str]:
                     raise SessionExpired(str(e)) from e
                 failures.append(symbol)
                 print(f"{symbol}: FAILED - {e}")
+
+        adjust_splits(conn, [c[0] for c in companies])
 
     if failures:
         print(f"{len(failures)} symbol(s) failed: {failures}")
