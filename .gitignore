@@ -30,3 +30,7 @@ pipeline/cron.log
 
 # Job run logs (pipeline/run.py)
 pipeline/logs/
+
+# Next.js
+.next/
+frontend/out/

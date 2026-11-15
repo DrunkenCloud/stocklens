@@ -13,9 +13,11 @@ SEARCH_SQL = """
 SELECT s.isin, s.name, s.nse_symbol, s.bse_code, s.bse_symbol, (c.symbol IS NOT NULL) AS tracked
 FROM securities s
 LEFT JOIN companies c ON c.symbol = s.nse_symbol AND c.is_active
-WHERE s.nse_symbol ILIKE %(prefix)s OR s.bse_symbol ILIKE %(prefix)s OR s.bse_code = %(q)s OR s.name ILIKE %(contains)s
+WHERE s.nse_symbol ILIKE %(prefix)s OR s.bse_symbol ILIKE %(prefix)s OR s.bse_code = %(q)s OR s.isin = upper(%(q)s)
+   OR s.name ILIKE %(contains)s
 ORDER BY
-    CASE WHEN upper(s.nse_symbol) = upper(%(q)s) OR upper(s.bse_symbol) = upper(%(q)s) OR s.bse_code = %(q)s THEN 0
+    CASE WHEN upper(s.nse_symbol) = upper(%(q)s) OR upper(s.bse_symbol) = upper(%(q)s) OR s.bse_code = %(q)s
+              OR s.isin = upper(%(q)s) THEN 0
          WHEN s.nse_symbol ILIKE %(prefix)s OR s.bse_symbol ILIKE %(prefix)s THEN 1
          WHEN s.name ILIKE %(prefix)s THEN 2
          ELSE 3 END,
