@@ -52,8 +52,27 @@ def test_overlap_between_funds_is_sum_of_common_minimum_weights():
 def test_holding_asset_mapping():
     assert [holding_asset(t, n) for t, n in [
         ("equity", "x"), ("money_market", "x"), ("debt", "x"), ("cash", "x"), ("gold", "x"),
-        ("fund_unit", "Nippon India Silver ETF"), ("reit", "x"), ("weird", "x")]] == [
-        "equity", "debt", "debt", "cash", "gold", "silver", "other", "other"]
+        ("fund_unit", "Nippon India Silver ETF"), ("reit", "x"), ("weird", "x"),
+        ("commodity", "Gold 995 1KG BAR"), ("fund_unit", "JPMorgan US Technology Fund"), ("fund_unit", "Some Liquid Fund"),
+        ("equity", "Senco Gold Limited")]] == [
+        "equity", "debt", "debt", "cash", "gold", "silver", "other", "other",
+        "gold", "equity", "debt", "equity"]
+
+
+def test_holdings_of_a_silver_etf_count_as_silver_even_if_mislabelled():
+    portfolios = {"S": [fund_row("INE000X01010", "Silver", "equity", None, 97.0), fund_row(None, "TREPS", "cash", None, 3.0)]}
+    items = [{"label": "TATSILV", "kind": "etf", "isin": None, "value": 1000.0, "portfolio": "S", "sector": None, "asset_class": "silver"}]
+    r = look_through(items, portfolios, {})
+    assert {a["asset"]: a["value"] for a in r["assets"]} == {"silver": 970.0, "cash": 30.0}, r["assets"]
+    assert r["companies"] == [] and {s["sector"] for s in r["sectors"]} == {"Silver", "Cash"}, r
+
+
+def test_overseas_fund_units_are_equity_in_an_overseas_sector():
+    portfolios = {"U": [fund_row("LU0159052710", "JPMorgan US Technology Fund", "fund_unit", None, 100.0)]}
+    items = [{"label": "US Tech FoF", "kind": "mf", "isin": None, "value": 500.0, "portfolio": "U", "sector": None, "asset_class": "equity"}]
+    r = look_through(items, portfolios, {})
+    assert {a["asset"]: a["value"] for a in r["assets"]} == {"equity": 500.0}
+    assert {s["sector"]: s["value"] for s in r["sectors"]} == {"Overseas funds": 500.0}
 
 
 if __name__ == "__main__":

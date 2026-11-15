@@ -6,6 +6,9 @@ _DEBT_WORDS = ("debt", "money", "bond", "gov", "treasury", "t-bill", "tbill", "g
 _CASH_WORDS = ("cash", "treps", "net_current", "receivable", "reverse_repo")
 
 
+_FUND_DEBT_WORDS = ("liquid", "debt", "bond", "gilt", "money market", "overnight")
+
+
 def holding_asset(holding_type: str | None, name: str) -> str:
     t = (holding_type or "").lower()
     n = name.lower()
@@ -19,7 +22,17 @@ def holding_asset(holding_type: str | None, name: str) -> str:
         return "gold"
     if "silver" in t or (t in ("fund_unit", "etf", "commodity") and "silver" in n):
         return "silver"
+    if t in ("fund_unit", "etf"):
+        return "debt" if any(w in n for w in _FUND_DEBT_WORDS) else "equity"
     return "other"
+
+
+def _equity_sector(row: dict) -> str:
+    if row["industry"]:
+        return row["industry"]
+    if (row["holding_type"] or "").lower() in ("fund_unit", "etf"):
+        return "Overseas funds" if row["isin"] and not row["isin"].startswith("IN") else "Other funds"
+    return "Other"
 
 
 def _pct(part: float, whole: float) -> float | None:
@@ -60,12 +73,15 @@ def look_through(items: list[dict], portfolios: dict[str, list[dict]], industry_
 
         covered_value += value
         weights = fund_weights.setdefault(item["portfolio"], {"label": item["label"], "equity": {}})
+        commodity = item.get("asset_class") if item.get("asset_class") in ("gold", "silver") else None
         for row in rows:
             share = value * row["pct_nav"] / 100
             asset = holding_asset(row["holding_type"], row["name"])
+            if commodity and asset != "cash":
+                asset = commodity
             add(assets, asset, share)
             if asset == "equity":
-                add(sectors, row["industry"] or "Other", share)
+                add(sectors, _equity_sector(row), share)
                 c = company(row["isin"], row["name"])
                 c["total"] += share
                 add(c["via"], item["label"], share)
