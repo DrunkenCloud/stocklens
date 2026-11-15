@@ -31,7 +31,10 @@ Area conventions: `backend/CLAUDE.md`, `pipeline/CLAUDE.md`, `frontend/CLAUDE.md
   holdings, auto-track new stocks, replace `source='icici_sync'` holdings, prices, missing fundamentals.
 - Tracking a stock (search → Track, or a manual holding for an untracked stock) inserts into
   `companies` and spawns `onboard` (fundamentals now, prices if the session is valid).
-- Timers (pinned to Asia/Kolkata; the VM clock is UTC): prices Mon–Fri 19:00, securities Sun 02:00,
+- Mutual funds: buy/sell entries in `mf_transactions` (per fund per broker, average cost); positions,
+  realised gains and value come from those + `mf_nav`. `refresh_mf` loads every scheme's NAV from AMFI and
+  backfills history (MFapi) for held funds. `/portfolio?scope=all|stocks|mf` merges stocks, ETFs and funds.
+- Timers (pinned to Asia/Kolkata; the VM clock is UTC): prices Mon–Fri 19:00, MF NAVs daily 23:30, securities Sun 02:00,
   fundamentals Sun 03:00;
   `Persistent=true` catches up after the machine was off. Jobs skip cleanly (exit 75, status
   `skipped`) without a valid session.
@@ -75,5 +78,14 @@ updates, fail2ban, sshd drop-in, ufw (22/80/443), Caddyfile with `basic_auth` on
 - Breeze historical prices are not adjusted for splits/bonuses (HDFCBANK's 1:1 bonus halves the price).
 - `get_portfolio_holdings` field names come from docs and were not yet confirmed live; parsing is
   strict and a bad shape fails the sync without touching stored holdings.
-- Yahoo (`{SYMBOL}.NS`): roe/op_margin/revenueGrowth are fractions (×100), debtToEquity is ×100
+- ETFs are `INF…` ISINs in NSE series `EQ` (kept, `kind='etf'`, asset class from the name). ICICI's app shows
+  its own names for them (ICICIGOLD = GOLDIETF, ICICISILVE = SILVERIETF); Breeze codes map them.
+- BSE-only stocks (e.g. NSE Ltd, BSE 544937): Breeze `get_historical_data` rejects BSE; use
+  `get_historical_data_v2` (fetched in 900-day windows) with the BSE `ShortName` as stock code.
+- Breeze answers an empty date range with Error "No Data Found": that is zero rows, not a failure.
+- AMFI NAV file moved to `https://portal.amfiindia.com/spages/NAVAll.txt` (8 columns incl. Plan/Option).
+  Some schemes (Motilal Oswal Multi Cap) have blank Plan/Option; refresh keeps a previously set value.
+- Opening MF positions were entered from app screenshots: units = current value ÷ NAV on 13 Nov 2026,
+  purchase dates unknown (so no XIRR until dated entries exist).
+- Yahoo (`{SYMBOL}.NS`, BSE-only `{SYMBOL}.BO`): roe/op_margin/revenueGrowth are fractions (×100), debtToEquity is ×100
   pre-scaled (÷100), dividendYield is already a percent.
