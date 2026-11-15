@@ -54,9 +54,9 @@ def test_holding_asset_mapping():
         ("equity", "x"), ("money_market", "x"), ("debt", "x"), ("cash", "x"), ("gold", "x"),
         ("fund_unit", "Nippon India Silver ETF"), ("reit", "x"), ("weird", "x"),
         ("commodity", "Gold 995 1KG BAR"), ("fund_unit", "JPMorgan US Technology Fund"), ("fund_unit", "Some Liquid Fund"),
-        ("equity", "Senco Gold Limited")]] == [
+        ("equity", "Senco Gold Limited"), ("derivative", "Bharti Airtel Ltd."), ("futures", "Nifty")]] == [
         "equity", "debt", "debt", "cash", "gold", "silver", "other", "other",
-        "gold", "equity", "debt", "equity"]
+        "gold", "equity", "debt", "equity", "equity", "equity"]
 
 
 def test_holdings_of_a_silver_etf_count_as_silver_even_if_mislabelled():
@@ -72,7 +72,7 @@ def test_overseas_fund_units_are_equity_in_an_overseas_sector():
     items = [{"label": "US Tech FoF", "kind": "mf", "isin": None, "value": 500.0, "portfolio": "U", "sector": None, "asset_class": "equity"}]
     r = look_through(items, portfolios, {})
     assert {a["asset"]: a["value"] for a in r["assets"]} == {"equity": 500.0}
-    assert {s["sector"]: s["value"] for s in r["sectors"]} == {"Overseas funds": 500.0}
+    assert {s["sector"]: s["value"] for s in r["sectors"]} == {"Overseas holdings": 500.0}
 
 
 if __name__ == "__main__":

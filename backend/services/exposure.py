@@ -12,7 +12,7 @@ _FUND_DEBT_WORDS = ("liquid", "debt", "bond", "gilt", "money market", "overnight
 def holding_asset(holding_type: str | None, name: str) -> str:
     t = (holding_type or "").lower()
     n = name.lower()
-    if t == "equity":
+    if t == "equity" or "derivative" in t or "future" in t:
         return "equity"
     if any(w in t for w in _DEBT_WORDS):
         return "debt"
@@ -31,7 +31,7 @@ def _equity_sector(row: dict) -> str:
     if row["industry"]:
         return row["industry"]
     if (row["holding_type"] or "").lower() in ("fund_unit", "etf"):
-        return "Overseas funds" if row["isin"] and not row["isin"].startswith("IN") else "Other funds"
+        return "Overseas holdings" if row["isin"] and not row["isin"].startswith("IN") else "Other funds"
     return "Other"
 
 
