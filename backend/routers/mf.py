@@ -61,7 +61,7 @@ def get_fund(code: int):
         ).fetchall() if scheme["portfolio_id"] else []
     sectors: dict[str, float] = {}
     for h in holdings:
-        asset = holding_asset(h["holding_type"], h["name"])
+        asset = holding_asset(h["holding_type"], h["name"], h["isin"])
         key = (h["industry"] or "Other") if asset == "equity" else ASSET_SECTOR.get(asset, "Other")
         sectors[key] = sectors.get(key, 0.0) + h["pct_nav"]
     return {

@@ -59,6 +59,11 @@ def test_holding_asset_mapping():
         "gold", "equity", "debt", "equity", "equity", "equity"]
 
 
+def test_equity_isin_wins_over_a_wrong_holding_type():
+    assert holding_asset("commodity", "Multi Commodity Exchange of India Ltd.", "INE745G01035") == "equity"
+    assert holding_asset("commodity", "Gold 995 1KG BAR", None) == "gold"
+
+
 def test_holdings_of_a_silver_etf_count_as_silver_even_if_mislabelled():
     portfolios = {"S": [fund_row("INE000X01010", "Silver", "equity", None, 97.0), fund_row(None, "TREPS", "cash", None, 3.0)]}
     items = [{"label": "TATSILV", "kind": "etf", "isin": None, "value": 1000.0, "portfolio": "S", "sector": None, "asset_class": "silver"}]

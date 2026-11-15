@@ -9,10 +9,10 @@ _CASH_WORDS = ("cash", "treps", "net_current", "receivable", "reverse_repo")
 _FUND_DEBT_WORDS = ("liquid", "debt", "bond", "gilt", "money market", "overnight")
 
 
-def holding_asset(holding_type: str | None, name: str) -> str:
+def holding_asset(holding_type: str | None, name: str, isin: str | None = None) -> str:
     t = (holding_type or "").lower()
     n = name.lower()
-    if t == "equity" or "derivative" in t or "future" in t:
+    if t == "equity" or "derivative" in t or "future" in t or (isin and isin.startswith("INE") and isin[7:9] == "01"):
         return "equity"
     if any(w in t for w in _DEBT_WORDS):
         return "debt"
@@ -76,7 +76,7 @@ def look_through(items: list[dict], portfolios: dict[str, list[dict]], industry_
         commodity = item.get("asset_class") if item.get("asset_class") in ("gold", "silver") else None
         for row in rows:
             share = value * row["pct_nav"] / 100
-            asset = holding_asset(row["holding_type"], row["name"])
+            asset = holding_asset(row["holding_type"], row["name"], row["isin"])
             if commodity and asset != "cash":
                 asset = commodity
             add(assets, asset, share)
