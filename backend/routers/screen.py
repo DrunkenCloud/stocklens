@@ -19,9 +19,9 @@ latest_prices AS (
     ORDER BY symbol, date DESC
 )
 SELECT c.symbol, c.name, c.sector, lf.pe, lf.pb, lf.roe, lf.debt_to_equity,
-       lf.dividend_yield, lf.rev_cagr_3y, lf.market_cap, lp.close
+       lf.dividend_yield, lf.rev_cagr_3y, lf.market_cap, lp.close AS latest_close
 FROM companies c
-JOIN latest_fundamentals lf ON lf.symbol = c.symbol
+LEFT JOIN latest_fundamentals lf ON lf.symbol = c.symbol
 LEFT JOIN latest_prices lp ON lp.symbol = c.symbol
 WHERE c.is_active
   AND (%(pe_max)s::numeric IS NULL OR lf.pe <= %(pe_max)s::numeric)
@@ -65,17 +65,4 @@ def screen(
             },
         ).fetchall()
 
-    return [
-        {
-            "symbol": r[0], "name": r[1], "sector": r[2],
-            "pe": float(r[3]) if r[3] is not None else None,
-            "pb": float(r[4]) if r[4] is not None else None,
-            "roe": float(r[5]) if r[5] is not None else None,
-            "debt_to_equity": float(r[6]) if r[6] is not None else None,
-            "dividend_yield": float(r[7]) if r[7] is not None else None,
-            "rev_cagr_3y": float(r[8]) if r[8] is not None else None,
-            "market_cap": float(r[9]) if r[9] is not None else None,
-            "latest_close": float(r[10]) if r[10] is not None else None,
-        }
-        for r in rows
-    ]
+    return rows

@@ -32,6 +32,12 @@ def upsert_snapshot(conn, symbol: str, snapshot_date: dt.date, data: dict) -> No
             """,
             [symbol, snapshot_date, *(data[c] for c in COLUMNS), Json(data["raw"])],
         )
+        # Stocks tracked via search/ICICI sync arrive without a sector; Yahoo's fills the gap
+        # (hand-seeded sectors are kept).
+        cur.execute(
+            "UPDATE companies SET sector = %s WHERE symbol = %s AND sector IS NULL",
+            (data["raw"].get("sector"), symbol),
+        )
     conn.commit()
 
 

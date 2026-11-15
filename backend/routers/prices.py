@@ -29,18 +29,7 @@ def get_prices(
 
     if not rows:
         raise HTTPException(status_code=404, detail=f"no price data for {symbol}")
-
-    return [
-        {
-            "date": r[0],
-            "open": float(r[1]) if r[1] is not None else None,
-            "high": float(r[2]) if r[2] is not None else None,
-            "low": float(r[3]) if r[3] is not None else None,
-            "close": float(r[4]),
-            "volume": r[5],
-        }
-        for r in rows
-    ]
+    return rows
 
 
 @router.get("/prices/{symbol}/returns")
@@ -58,8 +47,8 @@ def get_returns(
     if not rows:
         raise HTTPException(status_code=404, detail=f"no price data for {symbol} from {from_}")
 
-    dates = [r[0] for r in rows]
-    closes = [float(r[1]) for r in rows]
+    dates = [r["date"] for r in rows]
+    closes = [float(r["close"]) for r in rows]
     result = compute_returns(dates, closes, amount)
-    result["is_price_return_only"] = True  # not dividend-adjusted (05_SCHEMA_AND_API.md honesty note)
+    result["is_price_return_only"] = True  # not dividend-adjusted - the UI says so
     return result

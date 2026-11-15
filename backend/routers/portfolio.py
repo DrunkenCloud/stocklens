@@ -1,120 +1,110 @@
+"""Holdings across brokers. ICICI rows (source='icici_sync') are replaced on each
+sync and read-only here; Zerodha/Groww/other rows are entered by hand as
+quantity + total invested. Adding a holding for an untracked stock tracks it."""
 import datetime as dt
 import uuid
 
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, model_validator
 
 from db import pool
+from jobs import spawn_job
+from routers.securities import ensure_tracked
+from services.portfolio import summarize
 
 router = APIRouter()
 
-# v1 is single-user, no auth (06_DECISIONS.md D9). Seeded in db/seed.sql.
-DEFAULT_USER_ID = "00000000-0000-0000-0000-000000000001"
+DEFAULT_USER_ID = "00000000-0000-0000-0000-000000000001"  # single-user app, seeded by migration 001
+
+HOLDINGS_SQL = """
+SELECT h.id, h.symbol, c.name, c.sector, h.quantity, h.invested, h.broker, h.source, h.buy_date, h.note,
+       p.close, p.prev_close, p.price_date
+FROM holdings h
+JOIN companies c ON c.symbol = h.symbol
+LEFT JOIN LATERAL (
+    SELECT (array_agg(close ORDER BY date DESC))[1] AS close,
+           (array_agg(close ORDER BY date DESC))[2] AS prev_close,
+           max(date) AS price_date
+    FROM (SELECT date, close FROM daily_prices dp WHERE dp.symbol = h.symbol ORDER BY date DESC LIMIT 2) last2
+) p ON TRUE
+WHERE h.user_id = %s
+ORDER BY h.created_at
+"""
 
 
 class HoldingIn(BaseModel):
-    symbol: str
-    quantity: float
-    avg_cost: float
+    symbol: str | None = None
+    isin: str | None = None
+    quantity: float = Field(gt=0)
+    invested: float = Field(gt=0)
+    broker: str = Field(min_length=1, max_length=40)
     buy_date: dt.date | None = None
-    account: str | None = None
-    note: str | None = None
+    note: str | None = Field(None, max_length=500)
 
-
-def _holding_with_returns(row) -> dict:
-    id_, symbol, quantity, avg_cost, buy_date, account, note, latest_close = row
-    quantity = float(quantity)
-    avg_cost = float(avg_cost)
-    latest_close = float(latest_close) if latest_close is not None else None
-    cost_basis = avg_cost * quantity
-    current_value = latest_close * quantity if latest_close is not None else None
-    gain = current_value - cost_basis if current_value is not None else None
-    gain_pct = (latest_close - avg_cost) / avg_cost * 100 if latest_close is not None else None
-    return {
-        "id": str(id_), "symbol": symbol, "quantity": quantity, "avg_cost": avg_cost,
-        "buy_date": buy_date, "account": account, "note": note,
-        "latest_close": latest_close, "cost_basis": cost_basis,
-        "current_value": current_value, "gain": gain, "gain_pct": gain_pct,
-    }
-
-
-def _require_known_symbol(conn, symbol: str) -> None:
-    if not conn.execute("SELECT 1 FROM companies WHERE symbol = %s", (symbol,)).fetchone():
-        raise HTTPException(status_code=400, detail=f"unknown symbol {symbol}")
+    @model_validator(mode="after")
+    def _needs_stock(self):
+        if not (self.symbol or self.isin):
+            raise ValueError("symbol or isin required")
+        return self
 
 
 @router.get("/portfolio")
 def get_portfolio():
     with pool.connection() as conn:
-        rows = conn.execute(
-            """
-            SELECT h.id, h.symbol, h.quantity, h.avg_cost, h.buy_date, h.account, h.note, lp.close
-            FROM holdings h
-            LEFT JOIN LATERAL (
-                SELECT close FROM daily_prices dp WHERE dp.symbol = h.symbol ORDER BY dp.date DESC LIMIT 1
-            ) lp ON true
-            WHERE h.user_id = %s
-            ORDER BY h.created_at
-            """,
-            (DEFAULT_USER_ID,),
-        ).fetchall()
+        rows = conn.execute(HOLDINGS_SQL, (DEFAULT_USER_ID,)).fetchall()
+    return summarize(rows)
 
-    holdings = [_holding_with_returns(r) for r in rows]
-    total_cost = sum(h["cost_basis"] for h in holdings)
-    total_value = sum(h["current_value"] for h in holdings if h["current_value"] is not None)
-    total_gain = total_value - total_cost if holdings else 0.0
-    total_gain_pct = (total_gain / total_cost * 100) if total_cost else None
 
-    return {
-        "holdings": holdings,
-        "total_cost_basis": total_cost,
-        "total_current_value": total_value,
-        "total_gain": total_gain,
-        "total_gain_pct": total_gain_pct,
-    }
+def _resolve(conn, holding: HoldingIn) -> tuple[str, bool]:
+    return ensure_tracked(conn, isin=holding.isin, symbol=holding.symbol)
+
+
+def _require_manual(conn, holding_id: uuid.UUID) -> None:
+    row = conn.execute(
+        "SELECT source FROM holdings WHERE id = %s AND user_id = %s", (str(holding_id), DEFAULT_USER_ID)
+    ).fetchone()
+    if row is None:
+        raise HTTPException(status_code=404, detail="holding not found")
+    if row["source"] == "icici_sync":
+        raise HTTPException(status_code=409, detail="Synced from ICICI - it's replaced on every sync, so edit it there")
 
 
 @router.post("/portfolio", status_code=201)
 def add_holding(holding: HoldingIn):
     with pool.connection() as conn:
-        _require_known_symbol(conn, holding.symbol)
+        symbol, newly_tracked = _resolve(conn, holding)
         row = conn.execute(
             """
-            INSERT INTO holdings (user_id, symbol, quantity, avg_cost, buy_date, account, note)
-            VALUES (%s, %s, %s, %s, %s, %s, %s)
-            RETURNING id
+            INSERT INTO holdings (user_id, symbol, quantity, invested, broker, buy_date, note)
+            VALUES (%s, %s, %s, %s, %s, %s, %s) RETURNING id
             """,
-            (DEFAULT_USER_ID, holding.symbol, holding.quantity, holding.avg_cost,
-             holding.buy_date, holding.account, holding.note),
+            (DEFAULT_USER_ID, symbol, holding.quantity, holding.invested, holding.broker.strip(), holding.buy_date, holding.note),
         ).fetchone()
-        conn.commit()
-    return {"id": str(row[0])}
+    if newly_tracked:
+        spawn_job("onboard", ["--symbols", symbol], trigger="auto")
+    return {"id": str(row["id"]), "symbol": symbol, "newly_tracked": newly_tracked}
 
 
 @router.put("/portfolio/{holding_id}")
 def update_holding(holding_id: uuid.UUID, holding: HoldingIn):
     with pool.connection() as conn:
-        _require_known_symbol(conn, holding.symbol)
-        result = conn.execute(
+        _require_manual(conn, holding_id)
+        symbol, newly_tracked = _resolve(conn, holding)
+        conn.execute(
             """
-            UPDATE holdings SET symbol = %s, quantity = %s, avg_cost = %s, buy_date = %s, account = %s, note = %s
+            UPDATE holdings SET symbol = %s, quantity = %s, invested = %s, broker = %s, buy_date = %s, note = %s
             WHERE id = %s AND user_id = %s
             """,
-            (holding.symbol, holding.quantity, holding.avg_cost, holding.buy_date,
-             holding.account, holding.note, str(holding_id), DEFAULT_USER_ID),
+            (symbol, holding.quantity, holding.invested, holding.broker.strip(), holding.buy_date, holding.note,
+             str(holding_id), DEFAULT_USER_ID),
         )
-        conn.commit()
-        if result.rowcount == 0:
-            raise HTTPException(status_code=404, detail="holding not found")
+    if newly_tracked:
+        spawn_job("onboard", ["--symbols", symbol], trigger="auto")
     return {"status": "updated"}
 
 
 @router.delete("/portfolio/{holding_id}", status_code=204)
 def delete_holding(holding_id: uuid.UUID):
     with pool.connection() as conn:
-        result = conn.execute(
-            "DELETE FROM holdings WHERE id = %s AND user_id = %s", (str(holding_id), DEFAULT_USER_ID)
-        )
-        conn.commit()
-        if result.rowcount == 0:
-            raise HTTPException(status_code=404, detail="holding not found")
+        _require_manual(conn, holding_id)
+        conn.execute("DELETE FROM holdings WHERE id = %s AND user_id = %s", (str(holding_id), DEFAULT_USER_ID))

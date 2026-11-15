@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from db import pool
-from routers import admin, breeze_auth, portfolio, prices, screen, status, stocks
+from routers import admin, breeze_auth, portfolio, prices, screen, securities, status, stocks
 
 app = FastAPI(title="StockLens API")
 app.add_middleware(
@@ -18,6 +18,7 @@ app.include_router(portfolio.router, prefix="/api")
 app.include_router(breeze_auth.router, prefix="/api")
 app.include_router(admin.router, prefix="/api")
 app.include_router(status.router, prefix="/api")
+app.include_router(securities.router, prefix="/api")
 
 
 @app.get("/api/health")
