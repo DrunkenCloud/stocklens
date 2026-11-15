@@ -34,3 +34,4 @@ pipeline/logs/
 # Next.js
 .next/
 frontend/out/
+.playwright-mcp/
