@@ -6,6 +6,7 @@ export interface Status {
   last_sync: { id: number; status: JobStatus; started_at: string; finished_at: string | null; summary: string | null } | null;
   running: string[];
   prices_as_of: string | null;
+  live_at: string | null;
 }
 
 export interface Holding {

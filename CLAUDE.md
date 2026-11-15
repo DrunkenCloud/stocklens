@@ -45,7 +45,13 @@ Area conventions: `backend/CLAUDE.md`, `pipeline/CLAUDE.md`, `frontend/CLAUDE.md
   Sector charts cover only the equity part and group AMFI industries (plus Yahoo sector names for stocks no fund
   holds) into ~12 macro sectors via the table in `backend/services/sectors.py`; a label missing from it shows as
   "Unclassified" with its own name, so new labels are visible and go into that table.
-- Timers (pinned to Asia/Kolkata; the VM clock is UTC): prices Mon–Fri 19:00, MF NAVs daily 23:30, fund portfolios Wed/Sun 04:00, securities Sun 02:00,
+- Live prices: `fetch_live` runs every 5 min Mon–Fri 09:20–15:40 for held stocks/ETFs only, merging today's Breeze
+  1-minute bars into today's `daily_prices` row (so holdings, day change and charts move with no extra code); the
+  19:00 `fetch_prices` re-fetches each symbol's latest stored day, replacing it with the official daily bar. `/status`
+  `live_at` is set while runs are recent; the frontend refetches when it changes. Its runs are hidden from the Data
+  page except the latest, and it is excluded from `running`. Budget: Breeze allows ~5,000 calls/day and 75–100/min;
+  42 held × ~77 runs ≈ 3,200/day. Above ~55 held symbols, switch `stocklens-live.timer` to every 10 min.
+- Timers (pinned to Asia/Kolkata; the VM clock is UTC): live prices Mon–Fri every 5 min in market hours, prices Mon–Fri 19:00, MF NAVs daily 23:30, fund portfolios Wed/Sun 04:00, securities Sun 02:00,
   fundamentals Sun 03:00;
   `Persistent=true` catches up after the machine was off. Jobs skip cleanly (exit 75, status
   `skipped`) without a valid session.

@@ -32,14 +32,22 @@ export function useStatus() {
   const query = useQuery({
     queryKey: keys.status,
     queryFn: () => api<Status>("/status"),
-    refetchInterval: (q) => (q.state.data?.running.length ? 3000 : 60000),
+    refetchInterval: (q) => (q.state.data?.running.length ? 3000 : q.state.data?.live_at ? 30000 : 60000),
   });
   const wasRunning = useRef(false);
+  const lastLive = useRef<string | null>(null);
   const running = (query.data?.running.length ?? 0) > 0;
+  const liveAt = query.data?.live_at ?? null;
   useEffect(() => {
     if (wasRunning.current && !running) qc.invalidateQueries();
     wasRunning.current = running;
   }, [running, qc]);
+  useEffect(() => {
+    if (liveAt && lastLive.current && liveAt !== lastLive.current) {
+      for (const key of ["portfolio", "growth", "exposure", "prices", "stock"]) qc.invalidateQueries({ queryKey: [key] });
+    }
+    lastLive.current = liveAt;
+  }, [liveAt, qc]);
   return query;
 }
 

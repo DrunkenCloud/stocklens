@@ -1,0 +1,12 @@
+[Unit]
+Description=StockLens: live prices for held stocks every 5 minutes while the market is open
+
+[Timer]
+OnCalendar=Mon..Fri 09:20/5:00 Asia/Kolkata
+OnCalendar=Mon..Fri 10..14:00/5:00 Asia/Kolkata
+OnCalendar=Mon..Fri 15:00,05,10,15,20,25,30,35,40:00 Asia/Kolkata
+AccuracySec=15s
+Unit=stocklens-job@fetch_live.service
+
+[Install]
+WantedBy=timers.target

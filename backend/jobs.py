@@ -10,6 +10,7 @@ RUN_JOB_SH = REPO_ROOT / "pipeline" / "run_job.sh"
 JOBS: dict[str, list[str]] = {
     "sync_icici": ["jobs.sync_icici"],
     "fetch_prices": ["jobs.fetch_prices"],
+    "fetch_live": ["jobs.fetch_live"],
     "fetch_prices_backfill": ["jobs.fetch_prices", "--backfill"],
     "fetch_fundamentals": ["jobs.fetch_fundamentals"],
     "refresh_securities": ["jobs.refresh_securities"],

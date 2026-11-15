@@ -28,7 +28,9 @@ def list_runs(limit: int = Query(30, le=200)):
         runs = conn.execute(
             """
             SELECT id, job, args, trigger, status, started_at, finished_at, summary
-            FROM job_runs ORDER BY started_at DESC LIMIT %s
+            FROM job_runs
+            WHERE job <> 'fetch_live' OR id = (SELECT max(id) FROM job_runs WHERE job = 'fetch_live')
+            ORDER BY started_at DESC LIMIT %s
             """,
             (limit,),
         ).fetchall()

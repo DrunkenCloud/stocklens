@@ -100,10 +100,20 @@ export default function HoldingsPage() {
       <div className="mb-4 flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
         <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
           <h1 className="text-lg font-medium">Holdings</h1>
-          <p className="text-xs text-muted-foreground">
-            Prices as of {date(status?.prices_as_of)}
-            {status?.last_sync?.status === "done" && `, ICICI synced ${ago(status.last_sync.finished_at)}`}
-          </p>
+          {status?.live_at ? (
+            <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <span className="relative flex size-2" aria-hidden>
+                <span className="absolute inline-flex size-full animate-ping rounded-full bg-gain opacity-60 motion-reduce:hidden" />
+                <span className="relative inline-flex size-2 rounded-full bg-gain" />
+              </span>
+              <span><span className="font-medium text-gain">Live</span>, stock and ETF prices updated {ago(status.live_at)}; funds at last NAV</span>
+            </p>
+          ) : (
+            <p className="text-xs text-muted-foreground">
+              Prices as of {date(status?.prices_as_of)}
+              {status?.last_sync?.status === "done" && `, ICICI synced ${ago(status.last_sync.finished_at)}`}
+            </p>
+          )}
         </div>
         <Segmented label="Show" options={SCOPES} value={scope} onChange={setScope} />
       </div>

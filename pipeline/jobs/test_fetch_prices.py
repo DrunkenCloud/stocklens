@@ -6,7 +6,7 @@ from pipeline.jobs.fetch_prices import BACKFILL_START, date_windows, incremental
 def test_incremental_from_date():
     today = dt.date(2026, 7, 19)
     assert incremental_from_date(None, today, backfill=False) == BACKFILL_START
-    assert incremental_from_date(dt.date(2026, 7, 15), today, backfill=False) == dt.date(2026, 7, 16)
+    assert incremental_from_date(dt.date(2026, 7, 15), today, backfill=False) == dt.date(2026, 7, 15)
     assert incremental_from_date(dt.date(2026, 7, 15), today, backfill=True) == BACKFILL_START
 
 

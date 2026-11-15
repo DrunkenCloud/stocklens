@@ -19,7 +19,13 @@ def status():
             WHERE job = 'sync_icici' AND status <> 'running' ORDER BY started_at DESC LIMIT 1
             """
         ).fetchone()
-        running = [r["job"] for r in conn.execute("SELECT DISTINCT job FROM job_runs WHERE status = 'running'")]
+        running = [r["job"] for r in conn.execute("SELECT DISTINCT job FROM job_runs WHERE status = 'running' AND job <> 'fetch_live'")]
+        live = conn.execute(
+            """
+            SELECT finished_at FROM job_runs WHERE job = 'fetch_live' AND status = 'done'
+            AND finished_at > now() - interval '30 minutes' ORDER BY finished_at DESC LIMIT 1
+            """
+        ).fetchone()
         prices_as_of = conn.execute("SELECT max(date) AS d FROM daily_prices").fetchone()["d"]
 
     captured_at = session.get("captured_at")
@@ -31,4 +37,5 @@ def status():
         "last_sync": last_sync,
         "running": running,
         "prices_as_of": prices_as_of,
+        "live_at": live["finished_at"] if live else None,
     }

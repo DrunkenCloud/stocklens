@@ -16,6 +16,7 @@ import { cn } from "@/lib/utils";
 const JOBS: Record<string, { label: string; detail: string }> = {
   sync_icici: { label: "Update after login", detail: "Fetch prices and any missing fundamentals. Needs today's ICICI login." },
   fetch_prices: { label: "Update prices", detail: "Fetch new daily prices for every tracked stock." },
+  fetch_live: { label: "Update live prices", detail: "Today's prices so far for the stocks and ETFs you hold. Runs every 5 minutes while the market is open." },
   fetch_fundamentals: { label: "Update fundamentals", detail: "Refresh ratios from Yahoo Finance for every tracked stock." },
   refresh_securities: { label: "Refresh stock list", detail: "Re-download ICICI's list of NSE and BSE stocks used by search." },
   fetch_prices_backfill: { label: "Reload price history", detail: "Re-download full daily history since 2015. Takes a while." },

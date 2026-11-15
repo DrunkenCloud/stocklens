@@ -16,7 +16,7 @@ RETRY_BACKOFF_SECONDS = 5
 def incremental_from_date(last_date: dt.date | None, today: dt.date, backfill: bool) -> dt.date:
     if backfill or last_date is None:
         return BACKFILL_START
-    return last_date + dt.timedelta(days=1)
+    return last_date
 
 
 def normalize_row(raw: dict) -> tuple:
