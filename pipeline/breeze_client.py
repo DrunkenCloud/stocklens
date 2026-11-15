@@ -29,7 +29,7 @@ def check_response(resp: dict) -> list:
     if isinstance(success, list):
         return success
     error = resp.get("Error") if isinstance(resp, dict) else resp
-    if success is None and not error:
+    if success is None and (not error or str(error).strip().lower() == "no data found"):
         return []
     err = RuntimeError(f"Breeze error: {error}")
     if is_session_error(err):

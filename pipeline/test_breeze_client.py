@@ -23,6 +23,7 @@ def test_exit_code_to_status():
 def test_check_response_unwraps_success_and_raises_on_error():
     assert check_response({"Success": [{"a": 1}], "Status": 200, "Error": None}) == [{"a": 1}]
     assert check_response({"Success": None, "Status": 200, "Error": None}) == []
+    assert check_response({"Success": None, "Status": 500, "Error": "No Data Found"}) == []
     try:
         check_response({"Success": None, "Status": 500, "Error": "Rate limit exceeded"})
     except RuntimeError as e:
