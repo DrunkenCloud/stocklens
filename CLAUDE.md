@@ -44,7 +44,7 @@ cd backend && set -a && . ../.env && set +a && .venv/bin/uvicorn main:app --port
 cd frontend && npm run dev
 ```
 venvs: `uv venv --python 3.12 pipeline/.venv && uv pip install --python pipeline/.venv/bin/python -r pipeline/requirements.txt`
-(same for backend; the VM runs Python 3.10, so no 3.11+ syntax).
+(same for backend).
 
 ## Running it (this machine)
 

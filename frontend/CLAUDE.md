@@ -1,7 +1,7 @@
 # frontend/
 
 Next.js 16 App Router, `output: "export"` + `trailingSlash: true` (pages build to
-`out/<route>/index.html`, served by Caddy; no Node on the VM). Read `AGENTS.md`: this Next version
+`out/<route>/index.html`, served by Caddy; no Node server at runtime). Read `AGENTS.md`: this Next version
 differs from older docs; bundled docs are in `node_modules/next/dist/docs/`.
 
 - Every page is a client component; data via TanStack Query hooks in `src/lib/queries.ts`
