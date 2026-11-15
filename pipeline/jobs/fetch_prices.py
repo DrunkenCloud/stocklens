@@ -36,25 +36,49 @@ def normalize_row(raw: dict) -> tuple:
     )
 
 
+BSE_WINDOW_DAYS = 900
+
+
+def date_windows(start: dt.date, end: dt.date, days: int) -> list[tuple[dt.date, dt.date]]:
+    windows = []
+    while start <= end:
+        stop = min(end, start + dt.timedelta(days=days - 1))
+        windows.append((start, stop))
+        start = stop + dt.timedelta(days=1)
+    return windows
+
+
+def _call(client, breeze_code: str, from_date: dt.date, to_date: dt.date, exchange: str) -> list[dict]:
+    kwargs = dict(
+        interval="1day",
+        from_date=f"{from_date.isoformat()}T00:00:00.000Z",
+        to_date=f"{to_date.isoformat()}T00:00:00.000Z",
+        stock_code=breeze_code,
+        exchange_code=exchange,
+        product_type="cash",
+    )
+    if exchange == "BSE":
+        return check_response(client.get_historical_data_v2(**kwargs))
+    return check_response(client.get_historical_data(**kwargs))
+
+
 def fetch_symbol(client, breeze_code: str, from_date: dt.date, to_date: dt.date, exchange: str = "NSE") -> list[dict]:
-    last_err = None
-    for attempt in range(1, RETRIES + 1):
-        try:
-            resp = client.get_historical_data(
-                interval="1day",
-                from_date=f"{from_date.isoformat()}T00:00:00.000Z",
-                to_date=f"{to_date.isoformat()}T00:00:00.000Z",
-                stock_code=breeze_code,
-                exchange_code=exchange,
-                product_type="cash",
-            )
-            return check_response(resp)
-        except SessionExpired:
-            raise
-        except Exception as e:
-            last_err = e
-            time.sleep(RETRY_BACKOFF_SECONDS * attempt)
-    raise RuntimeError(f"failed after {RETRIES} attempts: {last_err}") from last_err
+    windows = date_windows(from_date, to_date, BSE_WINDOW_DAYS) if exchange == "BSE" else [(from_date, to_date)]
+    rows = []
+    for start, stop in windows:
+        last_err = None
+        for attempt in range(1, RETRIES + 1):
+            try:
+                rows += _call(client, breeze_code, start, stop, exchange)
+                break
+            except SessionExpired:
+                raise
+            except Exception as e:
+                last_err = e
+                time.sleep(RETRY_BACKOFF_SECONDS * attempt)
+        else:
+            raise RuntimeError(f"failed after {RETRIES} attempts: {last_err}") from last_err
+    return rows
 
 
 def upsert_rows(conn, symbol: str, rows: list[dict]) -> None:
