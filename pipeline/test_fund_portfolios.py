@@ -4,7 +4,7 @@ DOC = {
     "portfolio_id": "122639",
     "meta": {"as_of": "2026-10-31"},
     "holdings": [
-        {"holding_type": "equity", "instrument": "HDFC Bank Limited", "isin": "INE040A01034", "industry": "Banks", "pct_nav": 7.49},
+        {"holding_type": "equity", "instrument": "HDFC Bank Limited£", "isin": "INE040A01034", "industry": "Banks", "pct_nav": 7.49},
         {"holding_type": "money_market", "instrument": "Canara Bank (18/12/2026)", "isin": "INE476A16XX1", "industry": None, "pct_nav": 0.29},
         {"holding_type": "cash", "instrument": "Net Receivables", "isin": None, "industry": None, "pct_nav": None},
         {"holding_type": "equity", "instrument": "  Alphabet Inc A  ", "isin": "US02079K3059", "industry": "", "pct_nav": "3.10"},

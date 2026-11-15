@@ -7,7 +7,9 @@ export function shortFundName(name: string): string {
     .replace(DROP, "")
     .replace(/\s+/g, " ")
     .trim();
-  return cleaned.split(" ").slice(0, 3).join(" ");
+  const words = cleaned.split(" ").slice(0, 3);
+  while (words.length > 1 && /^(and|&|of|the|-)$/i.test(words[words.length - 1])) words.pop();
+  return words.join(" ");
 }
 
 export function holdingHref(h: { kind: string; symbol: string }): string {

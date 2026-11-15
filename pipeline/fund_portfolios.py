@@ -14,7 +14,7 @@ def portfolio_rows(doc: dict) -> list[dict]:
         rows.append({
             "position": position,
             "isin": h.get("isin") or None,
-            "name": (h.get("instrument") or "").strip(),
+            "name": (h.get("instrument") or "").strip().rstrip("£$#*^@¥€ ").strip(),
             "holding_type": h.get("holding_type") or None,
             "industry": h.get("industry") or None,
             "pct_nav": float(h["pct_nav"]),

@@ -130,8 +130,8 @@ export default function ExposurePage() {
     const top10 = data.companies.slice(0, 10).reduce((s, c) => s + (c.weight_pct ?? 0), 0);
     const largest = data.companies[0];
     const overlap = data.overlap[0];
-    const sectorRows = data.sectors.slice(0, 14).map((s) => ({ label: s.sector, value: s.value, pct: s.weight_pct }));
-    const rest = data.sectors.slice(14);
+    const sectorRows = data.sectors.slice(0, 20).map((s) => ({ label: s.sector, value: s.value, pct: s.weight_pct }));
+    const rest = data.sectors.slice(20);
     if (rest.length) {
       sectorRows.push({ label: `${rest.length} other sectors`, value: rest.reduce((s, x) => s + x.value, 0), pct: rest.reduce((s, x) => s + (x.weight_pct ?? 0), 0) });
     }
