@@ -13,9 +13,11 @@ export interface Holding {
   symbol: string;
   name: string;
   sector: string | null;
-  kind: "stock" | "etf";
+  kind: "stock" | "etf" | "mf";
   asset_class: AssetClass;
-  exchange: "NSE" | "BSE";
+  exchange: "NSE" | "BSE" | null;
+  category?: string | null;
+  realized?: number;
   quantity: number;
   invested: number;
   broker: string;
@@ -33,6 +35,48 @@ export interface Holding {
   day_change_pct: number | null;
   weight_pct: number | null;
   spark: number[];
+}
+
+export type Scope = "all" | "stocks" | "mf";
+
+export interface MfScheme {
+  code: number;
+  name: string;
+  amc: string | null;
+  category: string | null;
+  plan: string | null;
+  option: string | null;
+  nav: number | null;
+  nav_date: string | null;
+  asset_class: AssetClass;
+  held: boolean;
+}
+
+export interface MfTransaction {
+  id: string;
+  broker: string;
+  kind: "buy" | "sell";
+  units: number;
+  amount: number;
+  date: string | null;
+  note: string | null;
+}
+
+export interface MfTransactionInput {
+  code: number;
+  broker: string;
+  kind: "buy" | "sell";
+  units: number;
+  amount: number;
+  date?: string | null;
+  note?: string | null;
+}
+
+export interface Fund extends Omit<MfScheme, "held"> {
+  label: string;
+  isin: string | null;
+  navs: { date: string; nav: number }[];
+  transactions: MfTransaction[];
 }
 
 export interface HistoryPoint {

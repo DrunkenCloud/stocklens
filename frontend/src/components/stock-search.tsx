@@ -42,7 +42,7 @@ export function StockSearch({ className }: { className?: string }) {
         aria-label="Search stocks"
       >
         <SearchIcon className="size-4 shrink-0" />
-        <span className="hidden flex-1 text-left sm:inline">Search any NSE or BSE stock</span>
+        <span className="hidden flex-1 text-left sm:inline">Search stocks, ETFs and funds</span>
         <kbd className="hidden rounded border border-border px-1.5 text-[11px] lg:inline">Ctrl K</kbd>
       </button>
       <Dialog open={open} onOpenChange={setOpen}>
@@ -56,6 +56,11 @@ export function StockSearch({ className }: { className?: string }) {
               setOpen(false);
               setQuery("");
               router.push(stockHref(s));
+            }}
+            onSelectFund={(f) => {
+              setOpen(false);
+              setQuery("");
+              router.push(`/fund/?code=${f.code}`);
             }}
           />
         </DialogContent>

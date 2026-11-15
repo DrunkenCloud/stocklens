@@ -5,14 +5,15 @@ import { useState } from "react";
 import { Treemap } from "@/components/charts/treemap";
 import { Panel, Segmented } from "@/components/panel";
 import { inrCompact } from "@/lib/format";
+import { holdingHref, shortFundName } from "@/lib/holding";
 import type { Holding } from "@/lib/types";
 
 export function Heatmap({ holdings }: { holdings: Holding[] }) {
   const [mode, setMode] = useState<"day" | "total">("day");
-  const bySymbol = new Map<string, { value: number; invested: number; prev: number; name: string }>();
+  const bySymbol = new Map<string, { value: number; invested: number; prev: number; name: string; kind: string }>();
   for (const h of holdings) {
     if (h.value === null) continue;
-    const cur = bySymbol.get(h.symbol) ?? { value: 0, invested: 0, prev: 0, name: h.name };
+    const cur = bySymbol.get(h.symbol) ?? { value: 0, invested: 0, prev: 0, name: h.name, kind: h.kind };
     cur.value += h.value;
     cur.invested += h.invested;
     cur.prev += h.prev_close !== null ? h.quantity * h.prev_close : h.value;
@@ -20,11 +21,11 @@ export function Heatmap({ holdings }: { holdings: Holding[] }) {
   }
   const items = [...bySymbol].map(([symbol, x]) => ({
     key: symbol,
-    label: symbol,
+    label: x.kind === "mf" ? shortFundName(x.name) : symbol,
     sublabel: inrCompact(x.value),
     value: x.value,
     change: mode === "day" ? (x.prev ? ((x.value - x.prev) / x.prev) * 100 : null) : ((x.value - x.invested) / x.invested) * 100,
-    href: `/stock/?s=${encodeURIComponent(symbol)}`,
+    href: holdingHref({ kind: x.kind, symbol }),
   }));
 
   if (items.length === 0) return null;

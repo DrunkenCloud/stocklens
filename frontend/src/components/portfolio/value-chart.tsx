@@ -7,6 +7,7 @@ import { Panel, Segmented } from "@/components/panel";
 import { Skeleton } from "@/components/ui/skeleton";
 import { date, inr, pct, tone } from "@/lib/format";
 import { usePortfolioHistory } from "@/lib/queries";
+import type { Scope } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 const RANGES = [
@@ -19,10 +20,10 @@ const RANGES = [
 ] as const;
 type Range = (typeof RANGES)[number]["value"];
 
-export function ValueChart({ pricedInvested }: { pricedInvested: number }) {
+export function ValueChart({ pricedInvested, scope }: { pricedInvested: number; scope: Scope }) {
   const [range, setRange] = useState<Range>("365");
   const [hover, setHover] = useState<SeriesPoint | null>(null);
-  const { data, isPending, isError } = usePortfolioHistory(Number(range));
+  const { data, isPending, isError } = usePortfolioHistory(Number(range), scope);
   const series = useMemo(() => (data ?? []).map((d) => ({ time: d.date, value: d.value })), [data]);
   const reference = useMemo(() => (pricedInvested ? { value: pricedInvested, label: "Invested" } : null), [pricedInvested]);
 

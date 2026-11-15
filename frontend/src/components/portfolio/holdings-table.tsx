@@ -1,14 +1,14 @@
 "use client";
 
-import { ArrowDownIcon, ArrowUpIcon, PencilIcon, PlusIcon } from "lucide-react";
+import { ArrowDownIcon, ArrowUpIcon, PencilIcon } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 
 import { Sparkline } from "@/components/charts/sparkline";
 import { Panel } from "@/components/panel";
-import { Button } from "@/components/ui/button";
 import type { Holding } from "@/lib/types";
-import { brokerColor, inr, pct, qty, tone } from "@/lib/format";
+import { brokerColor, inr, num, pct, qty, tone } from "@/lib/format";
+import { holdingHref, holdingTitle } from "@/lib/holding";
 import { cn } from "@/lib/utils";
 
 type SortKey = "name" | "quantity" | "avg_cost" | "close" | "invested" | "value" | "pnl" | "pnl_pct" | "day_change_pct";
@@ -25,14 +25,15 @@ const COLUMNS: { key: SortKey; label: string; align?: "right" }[] = [
   { key: "day_change_pct", label: "Day chg", align: "right" },
 ];
 
-const stockHref = (symbol: string) => `/stock/?s=${encodeURIComponent(symbol)}`;
 
 function sortValue(h: Holding, key: SortKey): number | string {
   if (key === "name") return h.symbol;
   return h[key] ?? Number.NEGATIVE_INFINITY;
 }
 
-export function HoldingsTable({ holdings, onEdit, onAdd }: { holdings: Holding[]; onEdit: (h: Holding) => void; onAdd: () => void }) {
+const units = (h: Holding) => (h.kind === "mf" ? num(h.quantity, 3) : qty(h.quantity));
+
+export function HoldingsTable({ holdings, onEdit, addAction }: { holdings: Holding[]; onEdit: (h: Holding) => void; addAction: React.ReactNode }) {
   const [sort, setSort] = useState<{ key: SortKey; dir: 1 | -1 }>({ key: "value", dir: -1 });
   const [broker, setBroker] = useState<string | null>(null);
 
@@ -73,7 +74,7 @@ export function HoldingsTable({ holdings, onEdit, onAdd }: { holdings: Holding[]
               {brokers.map((b) => <option key={b} value={b}>{b}</option>)}
             </select>
           )}
-          <Button size="sm" variant="outline" onClick={onAdd}><PlusIcon /> Add holding</Button>
+          {addAction}
         </>
       }
       bodyClassName="p-0"
@@ -103,11 +104,12 @@ export function HoldingsTable({ holdings, onEdit, onAdd }: { holdings: Holding[]
             {rows.map((h) => (
               <tr key={h.id} className="group border-b border-border/70 hover:bg-muted/60">
                 <td className="py-2 pr-3 pl-4">
-                  <Link href={stockHref(h.symbol)} className="flex items-center gap-2">
+                  <Link href={holdingHref(h)} className="flex items-center gap-2">
                     <span className="h-6 w-0.5 shrink-0 rounded-full" style={{ background: brokerColor(h.broker) }} title={h.broker} />
                     <span className="min-w-0">
-                      <span className="flex items-center gap-1.5 font-medium group-hover:text-accent-blue">
-                        {h.symbol}
+                      <span className="flex max-w-72 items-center gap-1.5 font-medium group-hover:text-accent-blue">
+                        <span className="truncate">{holdingTitle(h)}</span>
+                        {h.kind === "mf" && <span className="rounded bg-muted px-1 text-[10px] font-normal text-muted-foreground">MF</span>}
                         {h.kind === "etf" && <span className="rounded bg-muted px-1 text-[10px] font-normal text-muted-foreground">ETF</span>}
                         {h.exchange === "BSE" && <span className="rounded bg-muted px-1 text-[10px] font-normal text-muted-foreground">BSE</span>}
                       </span>
@@ -117,7 +119,7 @@ export function HoldingsTable({ holdings, onEdit, onAdd }: { holdings: Holding[]
                     </span>
                   </Link>
                 </td>
-                <td className="px-3 py-2 text-right">{qty(h.quantity)}</td>
+                <td className="px-3 py-2 text-right">{units(h)}</td>
                 <td className="px-3 py-2 text-right">{inr(h.avg_cost, { precise: true })}</td>
                 <td className="px-3 py-2 text-right">{h.close === null ? <span className="text-text-tertiary">Awaiting</span> : inr(h.close, { precise: true })}</td>
                 <td className="px-3 py-2 text-right">{inr(h.invested, { precise: true })}</td>
@@ -128,7 +130,7 @@ export function HoldingsTable({ holdings, onEdit, onAdd }: { holdings: Holding[]
                 <td className="px-3 py-1 text-right"><Sparkline values={h.spark} /></td>
                 <td className="pr-2 text-right">
                   {h.source === "manual" && (
-                    <button type="button" onClick={() => onEdit(h)} aria-label={`Edit ${h.symbol} at ${h.broker}`}
+                    <button type="button" onClick={() => onEdit(h)} aria-label={`Edit ${holdingTitle(h)} at ${h.broker}`}
                       className="rounded p-1.5 text-text-tertiary opacity-0 group-hover:opacity-100 hover:bg-muted hover:text-foreground focus-visible:opacity-100">
                       <PencilIcon className="size-3.5" />
                     </button>
@@ -165,15 +167,15 @@ export function HoldingsTable({ holdings, onEdit, onAdd }: { holdings: Holding[]
         <ul className="num divide-y divide-border/70">
           {rows.map((h) => (
             <li key={h.id} className="flex items-stretch">
-              <Link href={stockHref(h.symbol)} className="flex min-w-0 flex-1 items-center gap-3 py-3 pl-4">
+              <Link href={holdingHref(h)} className="flex min-w-0 flex-1 items-center gap-3 py-3 pl-4">
                 <span className="h-9 w-0.5 shrink-0 rounded-full" style={{ background: brokerColor(h.broker) }} aria-hidden />
                 <div className="min-w-0 flex-1">
                   <div className="flex items-baseline justify-between gap-2">
-                    <span className="truncate font-medium">{h.symbol}</span>
+                    <span className="truncate font-medium">{holdingTitle(h)}</span>
                     <span className="font-medium">{h.value === null ? <span className="text-text-tertiary">Awaiting price</span> : inr(h.value)}</span>
                   </div>
                   <div className="mt-0.5 flex items-baseline justify-between gap-2 text-xs">
-                    <span className="truncate text-muted-foreground">{qty(h.quantity)} shares at {inr(h.avg_cost)}, {h.broker}</span>
+                    <span className="truncate text-muted-foreground">{units(h)} {h.kind === "mf" ? "units" : "shares"} at {inr(h.avg_cost)}, {h.broker}</span>
                     {h.pnl !== null && <span className={tone(h.pnl)}>{inr(h.pnl, { signed: true })} ({pct(h.pnl_pct, { signed: true })})</span>}
                   </div>
                   <div className="mt-0.5 flex items-baseline justify-between gap-2 text-xs text-muted-foreground">

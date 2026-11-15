@@ -13,6 +13,7 @@ JOBS: dict[str, list[str]] = {
     "fetch_prices_backfill": ["jobs.fetch_prices", "--backfill"],
     "fetch_fundamentals": ["jobs.fetch_fundamentals"],
     "refresh_securities": ["jobs.refresh_securities"],
+    "refresh_mf": ["jobs.refresh_mf"],
     "onboard": ["jobs.onboard"],
 }
 STALE_AFTER = "6 hours"

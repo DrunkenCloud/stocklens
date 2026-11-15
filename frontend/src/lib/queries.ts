@@ -5,13 +5,15 @@ import { useEffect, useRef } from "react";
 
 import { api } from "@/lib/api";
 import type {
-  Company, HistoryPoint, HoldingInput, JobRun, Portfolio, PricePoint, Returns, ScreenRow, Security, Status, Stock,
+  Company, Fund, HistoryPoint, HoldingInput, JobRun, MfScheme, MfTransactionInput, Portfolio, Scope, PricePoint, Returns, ScreenRow, Security, Status, Stock,
 } from "@/lib/types";
 
 export const keys = {
   status: ["status"] as const,
-  portfolio: ["portfolio"] as const,
-  history: (days: number) => ["history", days] as const,
+  portfolio: (scope: Scope) => ["portfolio", scope] as const,
+  history: (days: number, scope: Scope) => ["history", days, scope] as const,
+  mfSearch: (q: string) => ["mf-search", q] as const,
+  fund: (code: number) => ["fund", code] as const,
   search: (q: string) => ["search", q] as const,
   stock: (s: string) => ["stock", s] as const,
   prices: (s: string, from: string) => ["prices", s, from] as const,
@@ -38,12 +40,13 @@ export function useStatus() {
   return query;
 }
 
-export const usePortfolio = () => useQuery({ queryKey: keys.portfolio, queryFn: () => api<Portfolio>("/portfolio") });
+export const usePortfolio = (scope: Scope = "all") =>
+  useQuery({ queryKey: keys.portfolio(scope), queryFn: () => api<Portfolio>(`/portfolio?scope=${scope}`), placeholderData: keepPreviousData });
 
-export const usePortfolioHistory = (days: number) =>
+export const usePortfolioHistory = (days: number, scope: Scope = "all") =>
   useQuery({
-    queryKey: keys.history(days),
-    queryFn: () => api<HistoryPoint[]>(`/portfolio/history?days=${days}`),
+    queryKey: keys.history(days, scope),
+    queryFn: () => api<HistoryPoint[]>(`/portfolio/history?days=${days}&scope=${scope}`),
     placeholderData: keepPreviousData,
   });
 
@@ -56,6 +59,34 @@ export function useSecuritySearch(q: string) {
     placeholderData: keepPreviousData,
     staleTime: 5 * 60_000,
   });
+}
+
+export function useMfSearch(q: string) {
+  const term = q.trim();
+  return useQuery({
+    queryKey: keys.mfSearch(term),
+    queryFn: () => api<MfScheme[]>(`/mf/search?q=${encodeURIComponent(term)}&limit=12`),
+    enabled: term.length > 1,
+    placeholderData: keepPreviousData,
+    staleTime: 5 * 60_000,
+  });
+}
+
+export const useFund = (code: number) =>
+  useQuery({ queryKey: keys.fund(code), queryFn: () => api<Fund>(`/mf/${code}`), enabled: code > 0, retry: false });
+
+export function useSaveMfTx() {
+  const done = useInvalidateAll();
+  return useMutation({
+    mutationFn: ({ id, input }: { id?: string; input: MfTransactionInput }) =>
+      id ? api(`/mf/transactions/${id}`, { method: "PUT", json: input }) : api("/mf/transactions", { method: "POST", json: input }),
+    onSuccess: done,
+  });
+}
+
+export function useDeleteMfTx() {
+  const done = useInvalidateAll();
+  return useMutation({ mutationFn: (id: string) => api(`/mf/transactions/${id}`, { method: "DELETE" }), onSuccess: done });
 }
 
 export const useStock = (symbol: string) =>

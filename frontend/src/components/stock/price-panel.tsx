@@ -29,7 +29,7 @@ function sinceDays(prices: PricePoint[], days: number) {
   return prices.filter((p) => p.date >= cutoff);
 }
 
-export function PricePanel({ prices, isPending }: { prices: PricePoint[] | undefined; isPending: boolean }) {
+export function PricePanel({ prices, isPending, title = "Price" }: { prices: PricePoint[] | undefined; isPending: boolean; title?: string }) {
   const [range, setRange] = useState<Range>("365");
   const [hover, setHover] = useState<SeriesPoint | null>(null);
 
@@ -46,7 +46,7 @@ export function PricePanel({ prices, isPending }: { prices: PricePoint[] | undef
 
   return (
     <Panel
-      title="Price"
+      title={title}
       actions={<Segmented label="Time range" options={[...RANGES]} value={range} onChange={setRange} />}
       bodyClassName="p-0"
     >

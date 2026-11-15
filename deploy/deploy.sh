@@ -27,7 +27,7 @@ pipeline/.venv/bin/python db/migrate.py --seed
 mkdir -p ~/.config/systemd/user
 for unit in ~/trading/deploy/systemd/*; do ln -sf "$unit" ~/.config/systemd/user/"$(basename "$unit")"; done
 systemctl --user daemon-reload
-systemctl --user enable --now stocklens-prices.timer stocklens-fundamentals.timer stocklens-securities.timer
+systemctl --user enable --now stocklens-prices.timer stocklens-fundamentals.timer stocklens-securities.timer stocklens-mf.timer
 systemctl --user enable stocklens-backend.service
 systemctl --user restart stocklens-backend.service
 crontab -l 2>/dev/null | grep -v "trading/pipeline/run_job.sh" | crontab - || true

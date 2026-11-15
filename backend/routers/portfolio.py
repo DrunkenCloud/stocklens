@@ -6,6 +6,7 @@ from pydantic import BaseModel, Field, model_validator
 
 from db import pool
 from jobs import spawn_job
+from routers.mf import mf_history, mf_rows
 from routers.securities import ensure_tracked
 from services.portfolio import summarize
 
@@ -78,25 +79,39 @@ ORDER BY d.date
 SPARK_DAYS = 30
 
 
+Scope = Query("all", pattern="^(all|stocks|mf)$")
+
+
 @router.get("/portfolio")
-def get_portfolio():
+def get_portfolio(scope: str = Scope):
     with pool.connection() as conn:
-        rows = conn.execute(HOLDINGS_SQL, (DEFAULT_USER_ID,)).fetchall()
+        rows = conn.execute(HOLDINGS_SQL, (DEFAULT_USER_ID,)).fetchall() if scope != "mf" else []
         sparks = {
             r["symbol"]: r["closes"]
             for r in conn.execute(SPARK_SQL, (list({r["symbol"] for r in rows}), SPARK_DAYS))
         }
-    summary = summarize(rows)
+        funds = mf_rows(conn) if scope != "stocks" else []
+    summary = summarize(rows + funds)
     for h in summary["holdings"]:
-        h["spark"] = sparks.get(h["symbol"], [])
+        if h.get("kind") != "mf":
+            h["spark"] = sparks.get(h["symbol"], [])
     return summary
 
 
 @router.get("/portfolio/history")
-def get_history(days: int = Query(365, ge=7, le=365 * 12)):
+def get_history(days: int = Query(365, ge=7, le=365 * 12), scope: str = Scope):
     since = dt.date.today() - dt.timedelta(days=days)
     with pool.connection() as conn:
-        return conn.execute(HISTORY_SQL, {"user": DEFAULT_USER_ID, "since": since}).fetchall()
+        stocks = (
+            {r["date"]: r["value"] for r in conn.execute(HISTORY_SQL, {"user": DEFAULT_USER_ID, "since": since})}
+            if scope != "mf" else {}
+        )
+        funds = mf_history(conn, since) if scope != "stocks" else {}
+    if stocks and funds:
+        dates = sorted(stocks.keys() & funds.keys())
+    else:
+        dates = sorted(stocks or funds)
+    return [{"date": d, "value": stocks.get(d, 0.0) + funds.get(d, 0.0)} for d in dates]
 
 
 def _resolve(conn, holding: HoldingIn) -> tuple[str, bool]:
