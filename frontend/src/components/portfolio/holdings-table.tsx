@@ -1,31 +1,38 @@
 "use client";
 
-import { ArrowDownIcon, ArrowUpIcon, PencilIcon } from "lucide-react";
+import { ArrowDownIcon, ArrowUpIcon, PencilIcon, PlusIcon } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 
+import { Sparkline } from "@/components/charts/sparkline";
+import { Panel } from "@/components/panel";
+import { Button } from "@/components/ui/button";
 import type { Holding } from "@/lib/types";
 import { brokerColor, inr, pct, qty, tone } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
-type SortKey = "name" | "value" | "pnl_pct" | "day_change_pct" | "invested";
+type SortKey = "name" | "quantity" | "avg_cost" | "close" | "invested" | "value" | "pnl" | "pnl_pct" | "day_change_pct";
 
-const COLUMNS: { key: SortKey | null; label: string; className?: string }[] = [
-  { key: "name", label: "Stock" },
-  { key: null, label: "Shares", className: "text-right" },
-  { key: null, label: "Avg cost", className: "text-right" },
-  { key: "day_change_pct", label: "Last price", className: "text-right" },
-  { key: "invested", label: "Invested", className: "text-right" },
-  { key: "value", label: "Value", className: "text-right" },
-  { key: "pnl_pct", label: "Return", className: "text-right" },
+const COLUMNS: { key: SortKey; label: string; align?: "right" }[] = [
+  { key: "name", label: "Instrument" },
+  { key: "quantity", label: "Qty", align: "right" },
+  { key: "avg_cost", label: "Avg cost", align: "right" },
+  { key: "close", label: "LTP", align: "right" },
+  { key: "invested", label: "Invested", align: "right" },
+  { key: "value", label: "Cur. value", align: "right" },
+  { key: "pnl", label: "P&L", align: "right" },
+  { key: "pnl_pct", label: "Net chg", align: "right" },
+  { key: "day_change_pct", label: "Day chg", align: "right" },
 ];
 
+const stockHref = (symbol: string) => `/stock/?s=${encodeURIComponent(symbol)}`;
+
 function sortValue(h: Holding, key: SortKey): number | string {
-  if (key === "name") return h.name.toLowerCase();
+  if (key === "name") return h.symbol;
   return h[key] ?? Number.NEGATIVE_INFINITY;
 }
 
-export function HoldingsTable({ holdings, onEdit }: { holdings: Holding[]; onEdit: (h: Holding) => void }) {
+export function HoldingsTable({ holdings, onEdit, onAdd }: { holdings: Holding[]; onEdit: (h: Holding) => void; onAdd: () => void }) {
   const [sort, setSort] = useState<{ key: SortKey; dir: 1 | -1 }>({ key: "value", dir: -1 });
   const [broker, setBroker] = useState<string | null>(null);
 
@@ -38,88 +45,87 @@ export function HoldingsTable({ holdings, onEdit }: { holdings: Holding[]; onEdi
     });
   }, [holdings, broker, sort]);
 
+  const totals = useMemo(() => {
+    const priced = rows.filter((h) => h.value !== null);
+    const invested = rows.reduce((s, h) => s + h.invested, 0);
+    const pricedInvested = priced.reduce((s, h) => s + h.invested, 0);
+    const value = priced.reduce((s, h) => s + (h.value ?? 0), 0);
+    const pnl = value - pricedInvested;
+    return { invested, value, pnl, pnlPct: pricedInvested ? (pnl / pricedInvested) * 100 : null };
+  }, [rows]);
+
   const toggleSort = (key: SortKey) =>
     setSort((s) => (s.key === key ? { key, dir: s.dir === 1 ? -1 : 1 } : { key, dir: key === "name" ? 1 : -1 }));
 
   return (
-    <div>
-      {brokers.length > 1 && (
-        <div className="mb-3 flex flex-wrap gap-1.5" role="group" aria-label="Filter by broker">
-          {[null, ...brokers].map((b) => (
-            <button
-              key={b ?? "all"}
-              type="button"
-              aria-pressed={broker === b}
-              onClick={() => setBroker(b)}
-              className={cn(
-                "flex items-center gap-1.5 rounded-full border border-border px-3 py-1 text-sm text-muted-foreground hover:text-foreground",
-                broker === b && "border-foreground/30 bg-secondary text-foreground",
-              )}
+    <Panel
+      title={<>Holdings <span className="font-normal text-muted-foreground">({holdings.length})</span></>}
+      actions={
+        <>
+          {brokers.length > 1 && (
+            <select
+              aria-label="Filter by broker"
+              value={broker ?? ""}
+              onChange={(e) => setBroker(e.target.value || null)}
+              className="h-7 rounded border border-border bg-surface px-2 text-xs"
             >
-              {b && <span className="size-2 rounded-full" style={{ background: brokerColor(b) }} aria-hidden />}
-              {b ?? "All brokers"}
-            </button>
-          ))}
-        </div>
-      )}
-
-      {/* Wide screens: a real table */}
-      <div className="hidden overflow-x-auto md:block">
-        <table className="num w-full text-sm">
+              <option value="">All brokers</option>
+              {brokers.map((b) => <option key={b} value={b}>{b}</option>)}
+            </select>
+          )}
+          <Button size="sm" variant="outline" onClick={onAdd}><PlusIcon /> Add holding</Button>
+        </>
+      }
+      bodyClassName="p-0"
+    >
+      <div className="hidden overflow-x-auto lg:block">
+        <table className="num w-full text-[13px]">
           <thead>
-            <tr className="border-b border-border text-left text-muted-foreground">
+            <tr className="border-b border-border text-muted-foreground">
               {COLUMNS.map((c) => (
-                <th key={c.label} scope="col" className={cn("py-2 pr-4 font-normal last:pr-0", c.className)}
-                  aria-sort={c.key && sort.key === c.key ? (sort.dir === 1 ? "ascending" : "descending") : undefined}>
-                  {c.key ? (
-                    <button type="button" onClick={() => toggleSort(c.key!)} className="inline-flex items-center gap-1 hover:text-foreground">
-                      {c.label}
-                      {sort.key === c.key && (sort.dir === 1 ? <ArrowUpIcon className="size-3" /> : <ArrowDownIcon className="size-3" />)}
-                    </button>
-                  ) : c.label}
+                <th
+                  key={c.key}
+                  scope="col"
+                  aria-sort={sort.key === c.key ? (sort.dir === 1 ? "ascending" : "descending") : undefined}
+                  className={cn("px-3 py-2 font-normal first:pl-4", c.align === "right" ? "text-right" : "text-left")}
+                >
+                  <button type="button" onClick={() => toggleSort(c.key)} className="inline-flex items-center gap-1 hover:text-foreground">
+                    {c.label}
+                    {sort.key === c.key && (sort.dir === 1 ? <ArrowUpIcon className="size-3" /> : <ArrowDownIcon className="size-3" />)}
+                  </button>
                 </th>
               ))}
-              <th className="w-8"><span className="sr-only">Edit</span></th>
+              <th scope="col" className="px-3 py-2 text-right font-normal">30D</th>
+              <th className="w-10 pr-2"><span className="sr-only">Edit</span></th>
             </tr>
           </thead>
           <tbody>
             {rows.map((h) => (
-              <tr key={h.id} className="border-b border-border/70 last:border-0 hover:bg-secondary/50">
-                <td className="py-2.5 pr-4">
-                  <Link href={`/stock?s=${encodeURIComponent(h.symbol)}`} className="group flex items-center gap-2.5">
-                    <span className="size-2 shrink-0 rounded-full" style={{ background: brokerColor(h.broker) }} title={h.broker} />
+              <tr key={h.id} className="group border-b border-border/70 hover:bg-muted/60">
+                <td className="py-2 pr-3 pl-4">
+                  <Link href={stockHref(h.symbol)} className="flex items-center gap-2">
+                    <span className="h-6 w-0.5 shrink-0 rounded-full" style={{ background: brokerColor(h.broker) }} title={h.broker} />
                     <span className="min-w-0">
-                      <span className="block truncate font-medium group-hover:underline">{h.name}</span>
-                      <span className="block text-xs text-muted-foreground">
-                        {h.symbol} at {h.broker}{h.source === "icici_sync" && ", synced"}
+                      <span className="block font-medium group-hover:text-accent-blue">{h.symbol}</span>
+                      <span className="block max-w-56 truncate text-[11px] text-muted-foreground">
+                        {h.broker}{h.source === "icici_sync" ? " (synced)" : ""}
                       </span>
                     </span>
                   </Link>
                 </td>
-                <td className="py-2.5 pr-4 text-right">{qty(h.quantity)}</td>
-                <td className="py-2.5 pr-4 text-right">{inr(h.avg_cost, { precise: true })}</td>
-                <td className="py-2.5 pr-4 text-right">
-                  {h.close === null ? <span className="text-muted-foreground">Loading</span> : (
-                    <>
-                      <div>{inr(h.close, { precise: true })}</div>
-                      <div className={cn("text-xs", tone(h.day_change_pct))}>{pct(h.day_change_pct, { signed: true })}</div>
-                    </>
-                  )}
-                </td>
-                <td className="py-2.5 pr-4 text-right">{inr(h.invested)}</td>
-                <td className="py-2.5 pr-4 text-right font-medium">{inr(h.value)}</td>
-                <td className={cn("py-2.5 text-right", tone(h.pnl))}>
-                  {h.pnl === null ? "–" : (
-                    <>
-                      <div>{inr(h.pnl, { signed: true })}</div>
-                      <div className="text-xs">{pct(h.pnl_pct, { signed: true })}</div>
-                    </>
-                  )}
-                </td>
-                <td className="py-2.5 pl-2 text-right">
+                <td className="px-3 py-2 text-right">{qty(h.quantity)}</td>
+                <td className="px-3 py-2 text-right">{inr(h.avg_cost, { precise: true })}</td>
+                <td className="px-3 py-2 text-right">{h.close === null ? <span className="text-text-tertiary">Awaiting</span> : inr(h.close, { precise: true })}</td>
+                <td className="px-3 py-2 text-right">{inr(h.invested, { precise: true })}</td>
+                <td className="px-3 py-2 text-right">{inr(h.value, { precise: true })}</td>
+                <td className={cn("px-3 py-2 text-right", tone(h.pnl))}>{inr(h.pnl, { precise: true, signed: true })}</td>
+                <td className={cn("px-3 py-2 text-right", tone(h.pnl_pct))}>{pct(h.pnl_pct, { signed: true })}</td>
+                <td className={cn("px-3 py-2 text-right", tone(h.day_change_pct))}>{pct(h.day_change_pct, { signed: true })}</td>
+                <td className="px-3 py-1 text-right"><Sparkline values={h.spark} /></td>
+                <td className="pr-2 text-right">
                   {h.source === "manual" && (
-                    <button type="button" onClick={() => onEdit(h)} aria-label={`Edit ${h.name} at ${h.broker}`}
-                      className="rounded p-1.5 text-muted-foreground hover:bg-secondary hover:text-foreground">
+                    <button type="button" onClick={() => onEdit(h)} aria-label={`Edit ${h.symbol} at ${h.broker}`}
+                      className="rounded p-1.5 text-text-tertiary opacity-0 group-hover:opacity-100 hover:bg-muted hover:text-foreground focus-visible:opacity-100">
                       <PencilIcon className="size-3.5" />
                     </button>
                   )}
@@ -127,45 +133,63 @@ export function HoldingsTable({ holdings, onEdit }: { holdings: Holding[]; onEdi
               </tr>
             ))}
           </tbody>
+          <tfoot>
+            <tr className="font-medium">
+              <td className="py-2.5 pl-4" colSpan={4}>Total</td>
+              <td className="px-3 py-2.5 text-right">{inr(totals.invested, { precise: true })}</td>
+              <td className="px-3 py-2.5 text-right">{inr(totals.value, { precise: true })}</td>
+              <td className={cn("px-3 py-2.5 text-right", tone(totals.pnl))}>{inr(totals.pnl, { precise: true, signed: true })}</td>
+              <td className={cn("px-3 py-2.5 text-right", tone(totals.pnlPct))}>{pct(totals.pnlPct, { signed: true })}</td>
+              <td colSpan={3} />
+            </tr>
+          </tfoot>
         </table>
       </div>
 
-      {/* Phones: one line per holding, value and return on the right */}
-      <div className="md:hidden">
-        <label className="mb-2 flex items-center justify-end gap-2 text-sm text-muted-foreground">
-          Sort by
-          <select value={sort.key} onChange={(e) => setSort({ key: e.target.value as SortKey, dir: e.target.value === "name" ? 1 : -1 })}
-            className="rounded-md border border-input bg-surface px-2 py-1 text-foreground">
-            <option value="value">Value</option>
-            <option value="pnl_pct">Return</option>
-            <option value="day_change_pct">Last day</option>
+      <div className="lg:hidden">
+        <div className="flex items-center justify-end gap-2 border-b border-border px-4 py-2 text-xs text-muted-foreground">
+          <label htmlFor="mobile-sort">Sort</label>
+          <select id="mobile-sort" value={sort.key}
+            onChange={(e) => setSort({ key: e.target.value as SortKey, dir: e.target.value === "name" ? 1 : -1 })}
+            className="h-8 rounded border border-border bg-surface px-2 text-foreground">
+            <option value="value">Current value</option>
+            <option value="pnl_pct">Returns (%)</option>
+            <option value="day_change_pct">Day change</option>
             <option value="name">Name</option>
           </select>
-        </label>
-        <ul className="num divide-y divide-border/70 border-y border-border/70">
+        </div>
+        <ul className="num divide-y divide-border/70">
           {rows.map((h) => (
-            <li key={h.id} className="flex items-center gap-3 py-3">
-              <span className="size-2 shrink-0 rounded-full" style={{ background: brokerColor(h.broker) }} aria-hidden />
-              <Link href={`/stock?s=${encodeURIComponent(h.symbol)}`} className="min-w-0 flex-1">
-                <div className="truncate font-medium">{h.name}</div>
-                <div className="text-xs text-muted-foreground">
-                  {qty(h.quantity)} × {inr(h.avg_cost)} at {h.broker}
+            <li key={h.id} className="flex items-stretch">
+              <Link href={stockHref(h.symbol)} className="flex min-w-0 flex-1 items-center gap-3 py-3 pl-4">
+                <span className="h-9 w-0.5 shrink-0 rounded-full" style={{ background: brokerColor(h.broker) }} aria-hidden />
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-baseline justify-between gap-2">
+                    <span className="truncate font-medium">{h.symbol}</span>
+                    <span className="font-medium">{h.value === null ? <span className="text-text-tertiary">Awaiting price</span> : inr(h.value)}</span>
+                  </div>
+                  <div className="mt-0.5 flex items-baseline justify-between gap-2 text-xs">
+                    <span className="truncate text-muted-foreground">{qty(h.quantity)} shares at {inr(h.avg_cost)}, {h.broker}</span>
+                    {h.pnl !== null && <span className={tone(h.pnl)}>{inr(h.pnl, { signed: true })} ({pct(h.pnl_pct, { signed: true })})</span>}
+                  </div>
+                  <div className="mt-0.5 flex items-baseline justify-between gap-2 text-xs text-muted-foreground">
+                    {h.close !== null && <span>LTP {inr(h.close, { precise: true })}</span>}
+                    {h.day_change_pct !== null && <span className={tone(h.day_change_pct)}>{pct(h.day_change_pct, { signed: true })} today</span>}
+                  </div>
                 </div>
               </Link>
-              <div className="text-right">
-                <div className="font-medium">{h.value === null ? <span className="text-muted-foreground">Loading</span> : inr(h.value)}</div>
-                <div className={cn("text-xs", tone(h.pnl))}>{pct(h.pnl_pct, { signed: true })}</div>
+              <div className="flex w-11 items-center justify-center">
+                {h.source === "manual" && (
+                  <button type="button" onClick={() => onEdit(h)} aria-label={`Edit ${h.symbol} at ${h.broker}`}
+                    className="grid size-11 place-items-center text-text-tertiary">
+                    <PencilIcon className="size-4" />
+                  </button>
+                )}
               </div>
-              {h.source === "manual" && (
-                <button type="button" onClick={() => onEdit(h)} aria-label={`Edit ${h.name} at ${h.broker}`}
-                  className="-mr-1 rounded p-2 text-muted-foreground">
-                  <PencilIcon className="size-4" />
-                </button>
-              )}
             </li>
           ))}
         </ul>
       </div>
-    </div>
+    </Panel>
   );
 }

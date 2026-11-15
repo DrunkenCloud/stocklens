@@ -9,10 +9,9 @@ import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 
 export function stockHref(s: { nse_symbol: string | null; isin: string }) {
-  return s.nse_symbol ? `/stock?s=${encodeURIComponent(s.nse_symbol)}` : `/stock?isin=${s.isin}`;
+  return s.nse_symbol ? `/stock/?s=${encodeURIComponent(s.nse_symbol)}` : `/stock/?isin=${s.isin}`;
 }
 
-/** Header search: a field on wide screens, an icon on phones; ⌘K / Ctrl+K / "/" from anywhere. */
 export function StockSearch({ className }: { className?: string }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");

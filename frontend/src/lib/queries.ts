@@ -5,12 +5,13 @@ import { useEffect, useRef } from "react";
 
 import { api } from "@/lib/api";
 import type {
-  Company, HoldingInput, JobRun, Portfolio, PricePoint, Returns, ScreenRow, Security, Status, Stock,
+  Company, HistoryPoint, HoldingInput, JobRun, Portfolio, PricePoint, Returns, ScreenRow, Security, Status, Stock,
 } from "@/lib/types";
 
 export const keys = {
   status: ["status"] as const,
   portfolio: ["portfolio"] as const,
+  history: (days: number) => ["history", days] as const,
   search: (q: string) => ["search", q] as const,
   stock: (s: string) => ["stock", s] as const,
   prices: (s: string, from: string) => ["prices", s, from] as const,
@@ -21,8 +22,6 @@ export const keys = {
   companies: ["companies"] as const,
 };
 
-/** Polls fast while any job runs; when the last one finishes, refetches everything,
- *  so a sync's results appear without a manual refresh. */
 export function useStatus() {
   const qc = useQueryClient();
   const query = useQuery({
@@ -40,6 +39,13 @@ export function useStatus() {
 }
 
 export const usePortfolio = () => useQuery({ queryKey: keys.portfolio, queryFn: () => api<Portfolio>("/portfolio") });
+
+export const usePortfolioHistory = (days: number) =>
+  useQuery({
+    queryKey: keys.history(days),
+    queryFn: () => api<HistoryPoint[]>(`/portfolio/history?days=${days}`),
+    placeholderData: keepPreviousData,
+  });
 
 export function useSecuritySearch(q: string) {
   const term = q.trim();
@@ -97,7 +103,6 @@ export const useRun = (id: number | null) =>
     refetchInterval: (q) => (q.state.data?.status === "running" ? 2000 : false),
   });
 
-/** Every mutation here starts or finishes background work, so status + data refresh after. */
 function useInvalidateAll() {
   const qc = useQueryClient();
   return () => qc.invalidateQueries();

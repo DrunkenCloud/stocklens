@@ -19,12 +19,10 @@ const BROKERS = ["Zerodha", "Groww"];
 
 type Picked = { name: string; symbol: string | null; isin?: string };
 
-/** Add or edit a manually entered holding (Zerodha, Groww, anything not synced). */
 export function HoldingForm({ open, onOpenChange, holding }: { open: boolean; onOpenChange: (o: boolean) => void; holding: Holding | null }) {
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="w-full overflow-y-auto sm:max-w-md">
-        {/* Remount per holding so the fields start from that holding's values */}
         {open && <FormBody key={holding?.id ?? "new"} holding={holding} onDone={() => onOpenChange(false)} />}
       </SheetContent>
     </Sheet>

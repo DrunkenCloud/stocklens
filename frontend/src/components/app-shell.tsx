@@ -22,7 +22,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex min-h-dvh flex-col">
       <header className="sticky top-0 z-40 border-b border-border bg-background/90 backdrop-blur">
-        <div className="mx-auto flex h-14 max-w-6xl items-center gap-3 px-4">
+        <div className="mx-auto flex h-14 max-w-7xl items-center gap-3 px-4">
           <Link href="/" className="font-heading text-lg font-semibold tracking-tight">
             StockLens
           </Link>
@@ -46,7 +46,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </div>
       </header>
       <StatusBanner />
-      <main className="mx-auto w-full max-w-6xl flex-1 px-4 pt-6 pb-24 md:pb-12">{children}</main>
+      <main className="mx-auto w-full max-w-7xl flex-1 px-4 pt-6 pb-24 md:pb-12">{children}</main>
       <nav
         aria-label="Main"
         className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-3 border-t border-border bg-background/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden"

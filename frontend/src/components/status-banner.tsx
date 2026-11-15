@@ -23,7 +23,6 @@ export async function loginToIcici() {
   }
 }
 
-/** One line under the header, only when something needs attention or is in progress. */
 export function StatusBanner() {
   const { data: status, isError } = useStatus();
 
@@ -73,7 +72,7 @@ function Strip({ tone, children }: { tone: "info" | "warn"; children: React.Reac
           : "border-b border-border bg-secondary text-secondary-foreground"
       }
     >
-      <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-3 gap-y-2 px-4 py-2 text-sm">{children}</div>
+      <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-x-3 gap-y-2 px-4 py-2 text-sm">{children}</div>
     </div>
   );
 }

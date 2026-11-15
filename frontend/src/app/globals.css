@@ -7,11 +7,15 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-public-sans);
-  --font-heading: var(--font-bricolage);
+  --font-sans: var(--font-plex);
+  --font-heading: var(--font-plex);
   --color-gain: var(--gain);
   --color-loss: var(--loss);
   --color-surface: var(--surface);
+  --color-accent-blue: var(--accent-blue);
+  --color-gain-soft: var(--gain-soft);
+  --color-loss-soft: var(--loss-soft);
+  --color-text-tertiary: var(--text-tertiary);
   --color-broker-icici: var(--broker-icici);
   --color-broker-zerodha: var(--broker-zerodha);
   --color-broker-groww: var(--broker-groww);
@@ -54,73 +58,84 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
-/* StockLens palette. Navy ink on cool grey paper; colour only where it means
-   something: gain/loss, and one hue per broker in the allocation bar. */
 :root {
-  --background: #f3f5f8;
+
+  --background: #f5f5f4;
   --surface: #ffffff;
-  --foreground: #14213d;
   --card: #ffffff;
-  --card-foreground: #14213d;
   --popover: #ffffff;
-  --popover-foreground: #14213d;
-  --primary: #14213d;
+  --muted: #f0f0ee;
+  --secondary: #ececea;
+  --accent: #f0f0ee;
+
+  --foreground: #222222;
+  --card-foreground: #222222;
+  --popover-foreground: #222222;
+  --secondary-foreground: #222222;
+  --accent-foreground: #222222;
+  --muted-foreground: #686868;
+  --text-tertiary: #9a9a9a;
+
+  --border: #e3e3e0;
+  --input: #d6d6d2;
+
+  --primary: #2f6fde;
   --primary-foreground: #ffffff;
-  --secondary: #e8ecf2;
-  --secondary-foreground: #14213d;
-  --muted: #e8ecf2;
-  --muted-foreground: #56657d;
-  --accent: #e8ecf2;
-  --accent-foreground: #14213d;
-  --destructive: #c03a2b;
-  --border: #dbe1ea;
-  --input: #ccd4df;
-  --ring: #3346c8;
-  --gain: #0b7a5a;
-  --loss: #c03a2b;
-  --broker-icici: #d98e04;
-  --broker-zerodha: #3d52d5;
-  --broker-groww: #9b5de5;
-  --broker-other: #8391a7;
-  --chart-1: #3d52d5;
-  --chart-2: #d98e04;
-  --chart-3: #9b5de5;
-  --chart-4: #0b7a5a;
-  --chart-5: #8391a7;
-  --radius: 0.5rem;
+  --accent-blue: #2f6fde;
+  --ring: #2f6fde;
+
+  --gain: #0a9b6e;
+  --gain-soft: #e3f4ee;
+  --loss: #e0453a;
+  --loss-soft: #fbe9e7;
+  --destructive: #e0453a;
+  --broker-icici: #e8a33d;
+  --broker-zerodha: #387ed1;
+  --broker-groww: #5367ff;
+  --broker-other: #a0a0a0;
+  --chart-1: #387ed1;
+  --chart-2: #e8a33d;
+  --chart-3: #5367ff;
+  --chart-4: #0a9b6e;
+  --chart-5: #a0a0a0;
+  --radius: 0.375rem;
 }
 
 .dark {
-  --background: #0d1424;
-  --surface: #151e33;
-  --foreground: #e5eaf2;
-  --card: #151e33;
-  --card-foreground: #e5eaf2;
-  --popover: #18223a;
-  --popover-foreground: #e5eaf2;
-  --primary: #e5eaf2;
-  --primary-foreground: #0d1424;
-  --secondary: #1f2a44;
-  --secondary-foreground: #e5eaf2;
-  --muted: #1f2a44;
-  --muted-foreground: #94a2b9;
-  --accent: #1f2a44;
-  --accent-foreground: #e5eaf2;
-  --destructive: #f0715f;
-  --border: #253150;
-  --input: #2e3b5c;
-  --ring: #7d8cf0;
-  --gain: #3cc79a;
-  --loss: #f0715f;
-  --broker-icici: #f2a93b;
-  --broker-zerodha: #7d8cf0;
-  --broker-groww: #b98af0;
-  --broker-other: #7887a0;
-  --chart-1: #7d8cf0;
-  --chart-2: #f2a93b;
-  --chart-3: #b98af0;
-  --chart-4: #3cc79a;
-  --chart-5: #7887a0;
+  --background: #161718;
+  --surface: #1e1f21;
+  --card: #1e1f21;
+  --popover: #232427;
+  --muted: #26272a;
+  --secondary: #2b2c2f;
+  --accent: #26272a;
+  --foreground: #e6e6e6;
+  --card-foreground: #e6e6e6;
+  --popover-foreground: #e6e6e6;
+  --secondary-foreground: #e6e6e6;
+  --accent-foreground: #e6e6e6;
+  --muted-foreground: #a3a3a3;
+  --text-tertiary: #6f6f6f;
+  --border: #2e2f33;
+  --input: #3a3b40;
+  --primary: #5b93f0;
+  --primary-foreground: #0f1012;
+  --accent-blue: #5b93f0;
+  --ring: #5b93f0;
+  --gain: #2ccf96;
+  --gain-soft: #163329;
+  --loss: #ff6b5e;
+  --loss-soft: #3a1e1c;
+  --destructive: #ff6b5e;
+  --broker-icici: #f0b45c;
+  --broker-zerodha: #5b9ae6;
+  --broker-groww: #7d8cff;
+  --broker-other: #7a7a7a;
+  --chart-1: #5b9ae6;
+  --chart-2: #f0b45c;
+  --chart-3: #7d8cff;
+  --chart-4: #2ccf96;
+  --chart-5: #7a7a7a;
 }
 
 @layer base {
@@ -133,12 +148,21 @@
   html {
     @apply font-sans;
   }
-  h1, h2, h3 {
-    font-family: var(--font-heading);
+  body {
+    font-size: 14px;
+    line-height: 1.45;
   }
-  /* Figures line up in columns everywhere - this is a page of numbers. */
+
+  input, select, textarea {
+    font-size: max(16px, 1em);
+  }
+  @media (min-width: 768px) {
+    input, select, textarea { font-size: inherit; }
+  }
+
   .num {
     font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum";
   }
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after {

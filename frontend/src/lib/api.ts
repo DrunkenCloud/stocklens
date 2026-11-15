@@ -1,5 +1,3 @@
-// In production the frontend and API share an origin (Caddy routes /api/* to
-// FastAPI), so the default is relative. `next dev` talks to a local uvicorn.
 export const API_URL =
   process.env.NEXT_PUBLIC_API_URL ??
   (process.env.NODE_ENV === "development" ? "http://localhost:8000/api" : "/api");

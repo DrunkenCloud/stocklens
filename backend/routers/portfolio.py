@@ -4,7 +4,7 @@ quantity + total invested. Adding a holding for an untracked stock tracks it."""
 import datetime as dt
 import uuid
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field, model_validator
 
 from db import pool
@@ -48,11 +48,61 @@ class HoldingIn(BaseModel):
         return self
 
 
+SPARK_SQL = """
+SELECT symbol, array_agg(close::float ORDER BY date) AS closes
+FROM (
+    SELECT symbol, date, close, row_number() OVER (PARTITION BY symbol ORDER BY date DESC) AS rn
+    FROM daily_prices WHERE symbol = ANY(%s)
+) recent
+WHERE rn <= %s
+GROUP BY symbol
+"""
+
+# Value of the holdings you have *today* (that have prices), priced at each past day's close. Only days
+# where every current holding has a price (so the line doesn't jump when a stock's
+# history starts). Not your actual past portfolio - quantities aren't back-dated.
+HISTORY_SQL = """
+WITH held AS (
+    SELECT symbol, sum(quantity) AS qty FROM holdings h
+    WHERE user_id = %(user)s AND EXISTS (SELECT 1 FROM daily_prices dp WHERE dp.symbol = h.symbol)
+    GROUP BY symbol
+),
+days AS (
+    SELECT DISTINCT date FROM daily_prices
+    WHERE date >= %(since)s AND symbol IN (SELECT symbol FROM held)
+)
+SELECT d.date, sum(h.qty * p.close)::float AS value
+FROM days d
+CROSS JOIN held h
+JOIN LATERAL (
+    SELECT close FROM daily_prices dp WHERE dp.symbol = h.symbol AND dp.date <= d.date ORDER BY dp.date DESC LIMIT 1
+) p ON TRUE
+GROUP BY d.date
+HAVING count(*) = (SELECT count(*) FROM held)
+ORDER BY d.date
+"""
+SPARK_DAYS = 30
+
+
 @router.get("/portfolio")
 def get_portfolio():
     with pool.connection() as conn:
         rows = conn.execute(HOLDINGS_SQL, (DEFAULT_USER_ID,)).fetchall()
-    return summarize(rows)
+        sparks = {
+            r["symbol"]: r["closes"]
+            for r in conn.execute(SPARK_SQL, (list({r["symbol"] for r in rows}), SPARK_DAYS))
+        }
+    summary = summarize(rows)
+    for h in summary["holdings"]:
+        h["spark"] = sparks.get(h["symbol"], [])
+    return summary
+
+
+@router.get("/portfolio/history")
+def get_history(days: int = Query(365, ge=7, le=365 * 12)):
+    since = dt.date.today() - dt.timedelta(days=days)
+    with pool.connection() as conn:
+        return conn.execute(HISTORY_SQL, {"user": DEFAULT_USER_ID, "since": since}).fetchall()
 
 
 def _resolve(conn, holding: HoldingIn) -> tuple[str, bool]:

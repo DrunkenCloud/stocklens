@@ -1,5 +1,3 @@
-// Mirrors the FastAPI responses (backend/routers/*). Numbers arrive as JSON numbers.
-
 export type SessionState = "never" | "expired" | "valid";
 export type JobStatus = "running" | "done" | "failed" | "skipped";
 
@@ -31,6 +29,12 @@ export interface Holding {
   day_change: number | null;
   day_change_pct: number | null;
   weight_pct: number | null;
+  spark: number[];
+}
+
+export interface HistoryPoint {
+  date: string;
+  value: number;
 }
 
 export interface Portfolio {

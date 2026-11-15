@@ -1,4 +1,3 @@
-// Indian conventions: lakh/crore grouping (12,40,000) and compact L / Cr units.
 
 const inrFull = new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 });
 const inrPrecise = new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -38,7 +37,6 @@ export function qty(v: number): string {
   return plain.format(v);
 }
 
-/** Tailwind text colour for a signed value. */
 export function tone(v: number | null | undefined): string {
   if (!v) return "text-muted-foreground";
   return v > 0 ? "text-gain" : "text-loss";

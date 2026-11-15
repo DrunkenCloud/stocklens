@@ -5,7 +5,6 @@ import { useDebounced } from "@/hooks/use-debounced";
 import { useSecuritySearch } from "@/lib/queries";
 import type { Security } from "@/lib/types";
 
-/** Search box + results over every NSE/BSE equity. Server-side matching, so cmdk's own filter is off. */
 export function SecurityResults({
   query, onQueryChange, onSelect, placeholder = "Company name, NSE symbol or BSE code", autoFocus,
 }: {

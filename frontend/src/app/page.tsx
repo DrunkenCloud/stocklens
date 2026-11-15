@@ -3,13 +3,16 @@
 import { PlusIcon } from "lucide-react";
 import { useState } from "react";
 
+import { Allocation } from "@/components/portfolio/allocation";
+import { Figures } from "@/components/portfolio/figures";
+import { Heatmap } from "@/components/portfolio/heatmap";
 import { HoldingForm } from "@/components/portfolio/holding-form";
 import { HoldingsTable } from "@/components/portfolio/holdings-table";
-import { Sectors } from "@/components/portfolio/sectors";
-import { Summary } from "@/components/portfolio/summary";
+import { ValueChart } from "@/components/portfolio/value-chart";
 import { loginToIcici } from "@/components/status-banner";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ago, date } from "@/lib/format";
 import { usePortfolio, useStatus } from "@/lib/queries";
 import type { Holding } from "@/lib/types";
 
@@ -23,10 +26,12 @@ export default function HoldingsPage() {
   if (isPending) {
     body = (
       <div className="space-y-4" aria-busy>
-        <Skeleton className="h-4 w-28" />
-        <Skeleton className="h-14 w-72" />
-        <Skeleton className="h-3 w-full" />
-        <Skeleton className="mt-8 h-64 w-full" />
+        <Skeleton className="h-20 w-full" />
+        <div className="grid gap-4 lg:grid-cols-3">
+          <Skeleton className="h-80 lg:col-span-2" />
+          <Skeleton className="h-80" />
+        </div>
+        <Skeleton className="h-64 w-full" />
       </div>
     );
   } else if (isError) {
@@ -39,7 +44,7 @@ export default function HoldingsPage() {
   } else if (portfolio.holdings.length === 0) {
     body = (
       <div className="max-w-lg py-12">
-        <h1 className="text-3xl font-semibold tracking-tight">Nothing here yet</h1>
+        <h1 className="text-2xl font-medium tracking-tight">No holdings yet</h1>
         <p className="mt-3 text-muted-foreground">
           Log in to ICICI and your ICICI holdings come in on their own. For Zerodha, Groww or anywhere else,
           add each stock with how many shares you hold and what you paid in total.
@@ -51,21 +56,24 @@ export default function HoldingsPage() {
       </div>
     );
   } else {
+    const unpriced = portfolio.holdings.filter((h) => h.value === null).length;
     body = (
-      <div className="space-y-10">
-        <Summary portfolio={portfolio} status={status} />
-        <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_16rem]">
-          <section aria-labelledby="holdings-heading">
-            <div className="mb-3 flex items-center justify-between gap-3">
-              <h2 id="holdings-heading" className="text-base font-semibold">
-                Holdings <span className="font-normal text-muted-foreground">{portfolio.holdings.length}</span>
-              </h2>
-              <Button size="sm" variant="outline" onClick={openNew}><PlusIcon /> Add holding</Button>
-            </div>
-            <HoldingsTable holdings={portfolio.holdings} onEdit={(holding) => setForm({ open: true, holding })} />
-          </section>
-          <aside><Sectors sectors={portfolio.by_sector} /></aside>
+      <div className="space-y-4">
+        <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+          <h1 className="text-lg font-medium">Holdings</h1>
+          <p className="text-xs text-muted-foreground">
+            Prices as of {date(status?.prices_as_of)}
+            {status?.last_sync?.status === "done" && `, ICICI synced ${ago(status.last_sync.finished_at)}`}
+            {unpriced > 0 && `. ${unpriced} awaiting a first price, left out of value and returns.`}
+          </p>
         </div>
+        <Figures portfolio={portfolio} />
+        <div className="grid gap-4 lg:grid-cols-3">
+          <div className="lg:col-span-2"><ValueChart pricedInvested={portfolio.totals.priced_invested} /></div>
+          <Allocation portfolio={portfolio} />
+        </div>
+        <Heatmap holdings={portfolio.holdings} />
+        <HoldingsTable holdings={portfolio.holdings} onAdd={openNew} onEdit={(holding) => setForm({ open: true, holding })} />
       </div>
     );
   }
