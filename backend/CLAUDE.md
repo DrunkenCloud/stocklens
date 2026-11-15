@@ -9,5 +9,5 @@ FastAPI encodes Decimal/date. No ORM.
 - Background work goes through `jobs.spawn_job(name, extra_args, trigger)`: creates the `job_runs`
   row, then detaches `pipeline/run_job.sh ... --run-id N`. Never import pipeline code.
 - Single user: `DEFAULT_USER_ID = 00000000-0000-0000-0000-000000000001` (seeded by migration 001).
-- ICICI-synced holdings (`source='icici_sync'`) are read-only via the API (409).
+- Holdings come from `stock_transactions` / `mf_transactions` via `holdings.py`; writes re-validate the ledger (no overselling, 400).
 - `db.py` needs `DATABASE_URL` in the environment (no dotenv here).
