@@ -1,0 +1,7 @@
+[Unit]
+Description=StockLens pipeline job %i
+
+[Service]
+Type=oneshot
+ExecStart=%h/projects/trading/pipeline/run_job.sh jobs.%i
+SuccessExitStatus=75

@@ -1,0 +1,14 @@
+investlens.duckdns.org {
+	tls internal
+	encode zstd gzip
+
+	handle /api/* {
+		reverse_proxy 127.0.0.1:8000
+	}
+
+	handle {
+		root * {$STOCKLENS_ROOT}/frontend/out
+		try_files {path} {path}.html {path}/index.html /index.html
+		file_server
+	}
+}

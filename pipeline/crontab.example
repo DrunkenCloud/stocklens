@@ -1,3 +1,0 @@
-30 13 * * 1-5 /path/to/trading/pipeline/run_job.sh jobs.fetch_prices >> /path/to/trading/pipeline/cron.log 2>&1
-30 21 * * 6 /path/to/trading/pipeline/run_job.sh jobs.fetch_fundamentals >> /path/to/trading/pipeline/cron.log 2>&1
-30 20 * * 6 /path/to/trading/pipeline/run_job.sh jobs.refresh_securities >> /path/to/trading/pipeline/cron.log 2>&1

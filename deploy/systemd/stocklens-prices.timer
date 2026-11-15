@@ -1,0 +1,10 @@
+[Unit]
+Description=StockLens: daily prices after market close
+
+[Timer]
+OnCalendar=Mon..Fri 19:00
+Persistent=true
+Unit=stocklens-job@fetch_prices.service
+
+[Install]
+WantedBy=timers.target

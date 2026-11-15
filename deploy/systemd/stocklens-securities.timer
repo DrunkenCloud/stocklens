@@ -1,0 +1,10 @@
+[Unit]
+Description=StockLens: weekly NSE/BSE stock list
+
+[Timer]
+OnCalendar=Sun 02:00
+Persistent=true
+Unit=stocklens-job@refresh_securities.service
+
+[Install]
+WantedBy=timers.target
