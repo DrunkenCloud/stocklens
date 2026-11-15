@@ -1,7 +1,8 @@
 from itertools import combinations
 
+from services.sectors import OVERSEAS, UNCLASSIFIED, classify
+
 ASSET_SECTOR = {"debt": "Debt & money market", "cash": "Cash", "gold": "Gold", "silver": "Silver", "other": "Other"}
-UNKNOWN_SECTOR = "Not broken down"
 _DEBT_WORDS = ("debt", "money", "bond", "gov", "treasury", "t-bill", "tbill", "gilt", "sdl", "commercial_paper", "certificate", "ncd")
 _CASH_WORDS = ("cash", "treps", "net_current", "receivable", "reverse_repo")
 
@@ -27,22 +28,44 @@ def holding_asset(holding_type: str | None, name: str, isin: str | None = None) 
     return "other"
 
 
-def _equity_sector(row: dict) -> str:
-    if row["industry"]:
-        return row["industry"]
-    if (row["holding_type"] or "").lower() in ("fund_unit", "etf"):
-        return "Overseas holdings" if row["isin"] and not row["isin"].startswith("IN") else "Other funds"
-    return "Other"
+def _equity_sector(row: dict) -> tuple[str, str]:
+    if not row["industry"] and (row["holding_type"] or "").lower() in ("fund_unit", "etf"):
+        if row["isin"] and not row["isin"].startswith("IN"):
+            return OVERSEAS, "Overseas fund units"
+        return UNCLASSIFIED, "Fund units"
+    return classify(row["industry"])
 
 
 def _pct(part: float, whole: float) -> float | None:
     return part / whole * 100 if whole else None
 
 
+def _group_sectors(industries: dict[tuple[str, str], float]) -> list[dict]:
+    equity = sum(industries.values())
+    grouped: dict[str, dict[str, float]] = {}
+    for (macro, industry), value in industries.items():
+        grouped.setdefault(macro, {})[industry] = grouped.get(macro, {}).get(industry, 0.0) + value
+    out = []
+    for macro, inner in grouped.items():
+        value = sum(inner.values())
+        if value <= 0:
+            continue
+        out.append({
+            "sector": macro,
+            "value": value,
+            "weight_pct": _pct(value, equity),
+            "industries": [
+                {"industry": k, "value": v, "weight_pct": _pct(v, equity)}
+                for k, v in sorted(inner.items(), key=lambda kv: -kv[1]) if v > 0
+            ],
+        })
+    return sorted(out, key=lambda x: -x["value"])
+
+
 def look_through(items: list[dict], portfolios: dict[str, list[dict]], industry_by_isin: dict[str, str]) -> dict:
     total = sum(i["value"] for i in items)
     companies: dict[str, dict] = {}
-    sectors: dict[str, float] = {}
+    sectors: dict[tuple[str, str], float] = {}
     assets: dict[str, float] = {}
     fund_value = covered_value = 0.0
     fund_weights: dict[str, dict] = {}
@@ -60,15 +83,17 @@ def look_through(items: list[dict], portfolios: dict[str, list[dict]], industry_
             c = company(item["isin"], item["label"])
             c["direct"] += value
             c["total"] += value
-            add(sectors, industry_by_isin.get(item["isin"]) or item.get("sector") or "Other", value)
+            add(sectors, classify(industry_by_isin.get(item["isin"]) or item.get("sector")), value)
             add(assets, "equity", value)
             continue
 
         fund_value += value
         rows = portfolios.get(item["portfolio"]) if item.get("portfolio") else None
         if not rows:
-            add(sectors, UNKNOWN_SECTOR, value)
-            add(assets, item.get("asset_class") or "other", value)
+            asset = item.get("asset_class") or "other"
+            add(assets, asset, value)
+            if asset == "equity":
+                add(sectors, (UNCLASSIFIED, "Funds without a published portfolio"), value)
             continue
 
         covered_value += value
@@ -87,8 +112,6 @@ def look_through(items: list[dict], portfolios: dict[str, list[dict]], industry_
                 add(c["via"], item["label"], share)
                 if row["isin"]:
                     weights["equity"][row["isin"]] = weights["equity"].get(row["isin"], 0.0) + row["pct_nav"]
-            else:
-                add(sectors, ASSET_SECTOR.get(asset, "Other"), share)
 
     overlap = []
     for a, b in combinations(fund_weights.values(), 2):
@@ -110,7 +133,8 @@ def look_through(items: list[dict], portfolios: dict[str, list[dict]], industry_
              "weight_pct": _pct(c["total"], total)}
             for c in ranked
         ],
-        "sectors": [{"sector": s, "value": v, "weight_pct": _pct(v, total)} for s, v in sorted(sectors.items(), key=lambda kv: -kv[1])],
+        "sectors": _group_sectors(sectors),
+        "equity_total": sum(sectors.values()),
         "assets": [{"asset": a, "value": v, "weight_pct": _pct(v, total)} for a, v in sorted(assets.items(), key=lambda kv: -kv[1])],
         "overlap": overlap,
         "coverage_pct": _pct(covered_value, fund_value),

@@ -9,7 +9,7 @@ import { Panel, Segmented } from "@/components/panel";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SCOPES, useScope } from "@/hooks/use-scope";
-import { ASSET_CLASS, date, inr, pct } from "@/lib/format";
+import { ASSET_CLASS, CHART_COLORS, date, inr, pct } from "@/lib/format";
 import { shortFundName } from "@/lib/holding";
 import { useExposure } from "@/lib/queries";
 import type { Exposure } from "@/lib/types";
@@ -110,7 +110,10 @@ export default function ExposurePage() {
     const top10 = data.companies.slice(0, 10).reduce((s, c) => s + (c.weight_pct ?? 0), 0);
     const largest = data.companies[0];
     const overlap = data.overlap[0];
-    const sectorSlices = topSlices(data.sectors.map((x) => ({ key: x.sector, label: x.sector, value: x.value })), 14);
+    const sectorSlices = data.sectors.map((x, i) => ({
+      key: x.sector, label: x.sector, value: x.value, color: CHART_COLORS[i % CHART_COLORS.length],
+      parts: x.industries.map((d) => ({ label: d.industry, value: d.value })),
+    }));
     const assetSlices = topSlices(data.assets.map((a) => ({ key: a.asset, label: ASSET_CLASS[a.asset]?.label ?? a.asset, value: a.value, color: ASSET_CLASS[a.asset]?.color })), 8);
     const KIND_LABEL: Record<string, string> = { stock: "Stocks held directly", etf: "ETFs", mf: "Mutual funds" };
     const kindSlices = topSlices(Object.entries(data.by_kind).map(([k, v], i) => ({ key: k, label: KIND_LABEL[k] ?? k, value: v, color: ["#222222", "#e8a33d", "#387ed1"][i % 3] })), 5);
@@ -130,7 +133,7 @@ export default function ExposurePage() {
 
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           <DonutPanel title="Asset mix" slices={assetSlices} />
-          <DonutPanel title="Sectors" slices={sectorSlices} />
+          <DonutPanel title={<>Sectors <span className="font-normal text-muted-foreground">(equity part, tap to see industries)</span></>} slices={sectorSlices} />
           <DonutPanel title="How you hold it" slices={kindSlices} />
         </div>
 

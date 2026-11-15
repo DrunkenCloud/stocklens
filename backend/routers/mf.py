@@ -9,6 +9,7 @@ from db import pool
 from jobs import spawn_job
 from holdings import DEFAULT_USER_ID, load_ledger, scheme_label
 from services.exposure import ASSET_SECTOR, holding_asset
+from services.sectors import clean
 from services.ledger import positions
 
 router = APIRouter()
@@ -62,7 +63,7 @@ def get_fund(code: int):
     sectors: dict[str, float] = {}
     for h in holdings:
         asset = holding_asset(h["holding_type"], h["name"], h["isin"])
-        key = (h["industry"] or "Other") if asset == "equity" else ASSET_SECTOR.get(asset, "Other")
+        key = (clean(h["industry"]) or "Other") if asset == "equity" else ASSET_SECTOR.get(asset, "Other")
         sectors[key] = sectors.get(key, 0.0) + h["pct_nav"]
     return {
         **scheme, "label": scheme_label(scheme), "navs": navs, "transactions": transactions,

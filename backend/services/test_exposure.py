@@ -33,10 +33,14 @@ def test_companies_combine_direct_and_fund_exposure():
     assert r["by_kind"] == {"stock": 1000.0, "mf": 3500.0}, r["by_kind"]
 
 
-def test_sectors_use_fund_industries_for_direct_stocks_and_mark_unknown_funds():
-    sectors = {s["sector"]: s["value"] for s in look_through(ITEMS, PORTFOLIOS, {"INE040A01034": "Banks"})["sectors"]}
-    assert sectors == {"Banks": 2700.0, "Diversified FMCG": 600.0, "Petroleum Products": 500.0,
-                       "Debt & money market": 200.0, "Not broken down": 500.0}, sectors
+def test_sectors_cover_equity_only_grouped_by_macro_sector_with_industries():
+    r = look_through(ITEMS, PORTFOLIOS, {"INE040A01034": "Banks"})
+    sectors = {x["sector"]: x for x in r["sectors"]}
+    assert {k: v["value"] for k, v in sectors.items()} == {
+        "Financial Services": 2700.0, "FMCG": 600.0, "Energy": 500.0}, sectors
+    assert sectors["Financial Services"]["industries"] == [{"industry": "Banks", "value": 2700.0, "weight_pct": 2700.0 / 3800.0 * 100}]
+    assert close(sum(x["weight_pct"] for x in r["sectors"]), 100.0)
+    assert r["equity_total"] == 3800.0
 
 
 def test_assets_split_by_holding_type():
@@ -70,7 +74,7 @@ def test_holdings_of_a_silver_etf_count_as_silver_even_if_mislabelled():
     items = [{"label": "TATSILV", "kind": "etf", "isin": None, "value": 1000.0, "portfolio": "S", "sector": None, "asset_class": "silver"}]
     r = look_through(items, portfolios, {})
     assert {a["asset"]: a["value"] for a in r["assets"]} == {"silver": 970.0, "cash": 30.0}, r["assets"]
-    assert r["companies"] == [] and {s["sector"] for s in r["sectors"]} == {"Silver", "Cash"}, r
+    assert r["companies"] == [] and r["sectors"] == [], r
 
 
 def test_overseas_fund_units_are_equity_in_an_overseas_sector():
@@ -78,7 +82,7 @@ def test_overseas_fund_units_are_equity_in_an_overseas_sector():
     items = [{"label": "US Tech FoF", "kind": "mf", "isin": None, "value": 500.0, "portfolio": "U", "sector": None, "asset_class": "equity"}]
     r = look_through(items, portfolios, {})
     assert {a["asset"]: a["value"] for a in r["assets"]} == {"equity": 500.0}
-    assert {s["sector"]: s["value"] for s in r["sectors"]} == {"Overseas holdings": 500.0}
+    assert {s["sector"]: s["value"] for s in r["sectors"]} == {"Overseas": 500.0}
 
 
 if __name__ == "__main__":

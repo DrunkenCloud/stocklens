@@ -42,6 +42,9 @@ Area conventions: `backend/CLAUDE.md`, `pipeline/CLAUDE.md`, `frontend/CLAUDE.md
   disclosures by the MIT `fund-disclosures` project; ~8.6k schemes). We only read the published JSON; if that repo
   dies, its scrapers/parsers are the fallback. Groww Nifty Total Market (152092) is always fetched so direct stocks
   get the same AMFI industry names as fund holdings. Math in `backend/services/exposure.py`.
+  Sector charts cover only the equity part and group AMFI industries (plus Yahoo sector names for stocks no fund
+  holds) into ~12 macro sectors via the table in `backend/services/sectors.py`; a label missing from it shows as
+  "Unclassified" with its own name, so new labels are visible and go into that table.
 - Timers (pinned to Asia/Kolkata; the VM clock is UTC): prices Mon–Fri 19:00, MF NAVs daily 23:30, fund portfolios Wed/Sun 04:00, securities Sun 02:00,
   fundamentals Sun 03:00;
   `Persistent=true` catches up after the machine was off. Jobs skip cleanly (exit 75, status

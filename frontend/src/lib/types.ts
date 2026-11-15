@@ -82,6 +82,13 @@ export interface FundHolding {
   pct_nav: number;
 }
 
+export interface SectorGroup {
+  sector: string;
+  value: number;
+  weight_pct: number | null;
+  industries: { industry: string; value: number; weight_pct: number | null }[];
+}
+
 export interface Exposure {
   total: number;
   companies: {
@@ -95,7 +102,8 @@ export interface Exposure {
     via: { label: string; value: number }[];
   }[];
   companies_count: number;
-  sectors: { sector: string; value: number; weight_pct: number | null }[];
+  sectors: SectorGroup[];
+  equity_total: number;
   assets: { asset: string; value: number; weight_pct: number | null }[];
   overlap: { a: string; b: string; pct: number }[];
   coverage_pct: number | null;
@@ -157,7 +165,7 @@ export interface Portfolio {
     xirr_coverage_pct: number | null;
   };
   by_broker: { broker: string; invested: number; value: number; pnl: number | null; pnl_pct: number | null; count: number }[];
-  by_sector: { sector: string; value: number; weight_pct: number }[];
+  by_sector: SectorGroup[];
   by_asset_class: { asset_class: AssetClass; value: number; weight_pct: number }[];
 }
 
