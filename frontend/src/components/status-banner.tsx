@@ -54,7 +54,11 @@ export function StatusBanner() {
   if (status.last_sync?.status === "failed") {
     return (
       <Strip tone="warn">
-        <span className="flex-1">The last ICICI sync didn&apos;t finish: {status.last_sync.summary}</span>
+        <span className="flex-1">
+          {status.last_sync.summary?.startsWith("synced")
+            ? `ICICI holdings synced, but some data didn't update (${status.last_sync.summary.split("; ").slice(1).join(", ")}).`
+            : `The last ICICI sync failed: ${status.last_sync.summary ?? "no details"}`}
+        </span>
         <Link href="/admin" className="font-medium underline underline-offset-4">See details</Link>
       </Strip>
     );
