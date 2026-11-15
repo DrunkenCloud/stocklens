@@ -81,7 +81,7 @@ export function HoldingsTable({ holdings, onEdit, addAction }: { holdings: Holdi
       bodyClassName="p-0"
     >
       <div className="hidden overflow-x-auto lg:block">
-        <table className="num w-full text-[13px]">
+        <table className="num w-full text-[13px] whitespace-nowrap">
           <thead>
             <tr className="border-b border-border text-muted-foreground">
               {COLUMNS.map((c) => (

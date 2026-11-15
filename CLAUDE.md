@@ -26,9 +26,12 @@ Area conventions: `backend/CLAUDE.md`, `pipeline/CLAUDE.md`, `frontend/CLAUDE.md
 
 ## Data flow
 
+- Holdings are ledgers, entered by hand for every broker (ICICI included; nothing syncs holdings):
+  `stock_transactions` and `mf_transactions` hold dated buys/sells. `backend/services/ledger.py` derives
+  positions (average cost, realised gains), XIRR and the invested-vs-value growth series; entries without a
+  date stay in holdings but are left out of XIRR and growth (the UI says how much).
 - Daily: user clicks "Log in to ICICI" → ICICI redirects to `/api/cb/<BREEZE_CALLBACK_TOKEN>` →
-  token saved to `breeze_session` → `sync_icici` job: refresh securities if stale, pull ICICI
-  holdings, auto-track new stocks, replace `source='icici_sync'` holdings, prices, missing fundamentals.
+  token saved to `breeze_session` → `sync_icici` job: refresh securities if stale, prices, missing fundamentals.
 - Tracking a stock (search → Track, or a manual holding for an untracked stock) inserts into
   `companies` and spawns `onboard` (fundamentals now, prices if the session is valid).
 - Mutual funds: buy/sell entries in `mf_transactions` (per fund per broker, average cost); positions,
@@ -75,9 +78,9 @@ updates, fail2ban, sshd drop-in, ufw (22/80/443), Caddyfile with `basic_auth` on
   details" is a catch-all and is not treated as a session verdict.
 - ICICI's developer portal truncates the redirect URL at ~60 chars; the callback arrives as a POST
   with `apisession` in the query string.
-- Breeze historical prices are not adjusted for splits/bonuses (HDFCBANK's 1:1 bonus halves the price).
-- `get_portfolio_holdings` field names come from docs and were not yet confirmed live; parsing is
-  strict and a bad shape fails the sync without touching stored holdings.
+- Breeze adjusts history for splits/bonuses only at download time; rows fetched before a corporate action stay
+  unadjusted. `fetch_prices` runs `pipeline/splits.py` after each fetch: overnight drops of 2/3/4/5/10/20x
+  (±6%) scale earlier prices. Trades from before a split must be entered split-adjusted (qty×, price÷).
 - ETFs are `INF…` ISINs in NSE series `EQ` (kept, `kind='etf'`, asset class from the name). ICICI's app shows
   its own names for them (ICICIGOLD = GOLDIETF, ICICISILVE = SILVERIETF); Breeze codes map them.
 - BSE-only stocks (e.g. NSE Ltd, BSE 544937): Breeze `get_historical_data` rejects BSE; use
