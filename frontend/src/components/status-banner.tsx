@@ -13,6 +13,8 @@ const JOB_LABELS: Record<string, string> = {
   fetch_fundamentals: "Updating company fundamentals",
   refresh_securities: "Refreshing the list of listed stocks",
   onboard: "Loading data for a newly tracked stock",
+  refresh_mf: "Updating fund NAVs",
+  refresh_fund_portfolios: "Loading fund portfolios",
 };
 
 export async function loginToIcici() {

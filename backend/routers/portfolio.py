@@ -6,7 +6,7 @@ from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field, model_validator
 
 from db import pool
-from holdings import DEFAULT_USER_ID, growth, holding_rows, load_ledger
+from holdings import DEFAULT_USER_ID, exposure_from_rows, growth, holding_rows, load_ledger
 from jobs import spawn_job
 from routers.securities import ensure_tracked
 from services.ledger import positions
@@ -21,9 +21,19 @@ Scope = Query("all", pattern="^(all|stocks|mf)$")
 def get_portfolio(scope: str = Scope):
     with pool.connection() as conn:
         rows, overall = holding_rows(conn, scope)
+        exposure = exposure_from_rows(conn, rows)
     summary = summarize(rows)
     summary["totals"].update(overall)
+    summary["by_sector"] = exposure["sectors"]
+    summary["by_asset_class"] = [{"asset_class": a["asset"], "value": a["value"], "weight_pct": a["weight_pct"]} for a in exposure["assets"]]
     return summary
+
+
+@router.get("/portfolio/exposure")
+def get_exposure(scope: str = Scope):
+    with pool.connection() as conn:
+        rows, _ = holding_rows(conn, scope)
+        return exposure_from_rows(conn, rows)
 
 
 @router.get("/portfolio/growth")
@@ -56,6 +66,17 @@ def _validate_ledger(conn) -> None:
         raise HTTPException(status_code=400, detail=str(e))
 
 
+def _etf_without_portfolio(conn, symbol: str) -> int | None:
+    row = conn.execute(
+        """
+        SELECT s.code FROM companies c JOIN mf_schemes s ON s.isin = c.isin
+        WHERE c.symbol = %s AND c.kind = 'etf' AND s.portfolio_id IS NULL
+        """,
+        (symbol,),
+    ).fetchone()
+    return row["code"] if row else None
+
+
 @router.get("/stock-transactions")
 def list_stock_transactions(symbol: str):
     with pool.connection() as conn:
@@ -80,8 +101,11 @@ def add_stock_transaction(tx: StockTxIn):
             (DEFAULT_USER_ID, symbol, tx.broker.strip(), tx.kind, tx.quantity, tx.price, tx.date, tx.note),
         ).fetchone()
         _validate_ledger(conn)
+        etf_code = _etf_without_portfolio(conn, symbol)
     if newly_tracked:
         spawn_job("onboard", ["--symbols", symbol], trigger="auto")
+    if etf_code is not None:
+        spawn_job("refresh_fund_portfolios", ["--codes", str(etf_code)], trigger="auto")
     return {"id": str(row["id"]), "symbol": symbol, "newly_tracked": newly_tracked}
 
 

@@ -1,5 +1,6 @@
 import datetime as dt
 
+from services.exposure import look_through
 from services.ledger import growth_series, positions, xirr
 
 DEFAULT_USER_ID = "00000000-0000-0000-0000-000000000001"
@@ -156,3 +157,84 @@ def growth(conn, scope: str, since: dt.date) -> dict:
         "excluded_count": len(excluded),
         "excluded_invested": round(sum(p["invested"] for p in excluded.values()), 2),
     }
+
+
+TOP_COMPANIES = 100
+
+
+def _load_portfolios(conn, pids: list[str]) -> dict[str, list[dict]]:
+    out: dict[str, list[dict]] = {}
+    if not pids:
+        return out
+    for r in conn.execute(
+        """
+        SELECT portfolio_id, isin, name, holding_type, industry, pct_nav::float AS pct_nav
+        FROM fund_portfolio_holdings WHERE portfolio_id = ANY(%s) ORDER BY portfolio_id, position
+        """,
+        (pids,),
+    ):
+        out.setdefault(r["portfolio_id"], []).append(r)
+    return out
+
+
+def exposure_from_rows(conn, rows: list[dict]) -> dict:
+    priced = [{**r, "value": r["quantity"] * r["close"]} for r in rows if r["close"] is not None]
+    symbols = sorted({r["symbol"] for r in priced if r["kind"] != "mf"})
+    codes = sorted({int(r["symbol"]) for r in priced if r["kind"] == "mf"})
+    stock_info = {c["symbol"]: c for c in conn.execute(
+        """
+        SELECT c.symbol, c.isin, s.portfolio_id, s.portfolio_as_of
+        FROM companies c LEFT JOIN mf_schemes s ON s.isin = c.isin AND c.kind = 'etf'
+        WHERE c.symbol = ANY(%s)
+        """,
+        (symbols,),
+    )} if symbols else {}
+    fund_info = {s["code"]: s for s in conn.execute(
+        "SELECT code, portfolio_id, portfolio_as_of FROM mf_schemes WHERE code = ANY(%s)", (codes,)
+    )} if codes else {}
+
+    items: dict[tuple, dict] = {}
+    as_of = set()
+    for r in priced:
+        if r["kind"] == "mf":
+            info = fund_info.get(int(r["symbol"]), {})
+            key, kind, isin = ("mf", r["symbol"]), "mf", None
+        else:
+            info = stock_info.get(r["symbol"], {})
+            key, kind, isin = ("st", r["symbol"]), ("etf" if r["kind"] == "etf" else "stock"), info.get("isin")
+        if info.get("portfolio_as_of"):
+            as_of.add(info["portfolio_as_of"])
+        item = items.setdefault(key, {
+            "label": r["name"] if kind != "etf" else r["symbol"], "kind": kind, "isin": isin, "value": 0.0,
+            "portfolio": info.get("portfolio_id"), "sector": r["sector"], "asset_class": r["asset_class"],
+        })
+        item["value"] += r["value"]
+
+    portfolios = _load_portfolios(conn, sorted({i["portfolio"] for i in items.values() if i["portfolio"]}))
+    stock_isins = [i["isin"] for i in items.values() if i["kind"] == "stock" and i["isin"]]
+    industry_by_isin = {r["isin"]: r["industry"] for r in conn.execute(
+        """
+        SELECT DISTINCT ON (isin) isin, industry FROM fund_portfolio_holdings
+        WHERE isin = ANY(%s) AND industry IS NOT NULL ORDER BY isin, as_of DESC
+        """,
+        (stock_isins,),
+    )} if stock_isins else {}
+
+    result = look_through(list(items.values()), portfolios, industry_by_isin)
+    top = result["companies"][:TOP_COMPANIES]
+    isins = [c["isin"] for c in top if c["isin"]]
+    links = {r["isin"]: r for r in conn.execute(
+        """
+        SELECT s.isin, coalesce(c.symbol, s.nse_symbol, s.bse_symbol) AS symbol, c.symbol IS NOT NULL AS tracked
+        FROM securities s LEFT JOIN companies c ON c.isin = s.isin WHERE s.isin = ANY(%s)
+        """,
+        (isins,),
+    )} if isins else {}
+    for c in top:
+        link = links.get(c["isin"])
+        c["symbol"] = link["symbol"] if link else None
+        c["tracked"] = bool(link and link["tracked"])
+    result["companies_count"] = len(result["companies"])
+    result["companies"] = top
+    result["as_of"] = sorted(d.isoformat() for d in as_of)
+    return result

@@ -14,6 +14,7 @@ JOBS: dict[str, list[str]] = {
     "fetch_fundamentals": ["jobs.fetch_fundamentals"],
     "refresh_securities": ["jobs.refresh_securities"],
     "refresh_mf": ["jobs.refresh_mf"],
+    "refresh_fund_portfolios": ["jobs.refresh_fund_portfolios"],
     "onboard": ["jobs.onboard"],
 }
 STALE_AFTER = "6 hours"

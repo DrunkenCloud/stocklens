@@ -37,7 +37,12 @@ Area conventions: `backend/CLAUDE.md`, `pipeline/CLAUDE.md`, `frontend/CLAUDE.md
 - Mutual funds: buy/sell entries in `mf_transactions` (per fund per broker, average cost); positions,
   realised gains and value come from those + `mf_nav`. `refresh_mf` loads every scheme's NAV from AMFI and
   backfills history (MFapi) for held funds. `/portfolio?scope=all|stocks|mf` merges stocks, ETFs and funds.
-- Timers (pinned to Asia/Kolkata; the VM clock is UTC): prices Mon–Fri 19:00, MF NAVs daily 23:30, securities Sun 02:00,
+- Look-through (Exposure page, sector/asset splits): `refresh_fund_portfolios` downloads each held fund's and ETF's
+  latest portfolio from the public `kushagra-agarwal-a/fund-holdings-data` repo (parsed from official AMC monthly
+  disclosures by the MIT `fund-disclosures` project; ~8.6k schemes). We only read the published JSON; if that repo
+  dies, its scrapers/parsers are the fallback. Groww Nifty Total Market (152092) is always fetched so direct stocks
+  get the same AMFI industry names as fund holdings. Math in `backend/services/exposure.py`.
+- Timers (pinned to Asia/Kolkata; the VM clock is UTC): prices Mon–Fri 19:00, MF NAVs daily 23:30, fund portfolios Wed/Sun 04:00, securities Sun 02:00,
   fundamentals Sun 03:00;
   `Persistent=true` catches up after the machine was off. Jobs skip cleanly (exit 75, status
   `skipped`) without a valid session.

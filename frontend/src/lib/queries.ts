@@ -5,7 +5,7 @@ import { useEffect, useRef } from "react";
 
 import { api } from "@/lib/api";
 import type {
-  Company, Fund, Growth, JobRun, MfScheme, MfTransactionInput, Portfolio, Scope, StockTransaction, StockTransactionInput, PricePoint, Returns, ScreenRow, Security, Status, Stock,
+  Company, Exposure, Fund, Growth, JobRun, MfScheme, MfTransactionInput, Portfolio, Scope, StockTransaction, StockTransactionInput, PricePoint, Returns, ScreenRow, Security, Status, Stock,
 } from "@/lib/types";
 
 export const keys = {
@@ -13,6 +13,7 @@ export const keys = {
   portfolio: (scope: Scope) => ["portfolio", scope] as const,
   growth: (days: number, scope: Scope) => ["growth", days, scope] as const,
   entries: (symbol: string) => ["entries", symbol] as const,
+  exposure: (scope: Scope) => ["exposure", scope] as const,
   mfSearch: (q: string) => ["mf-search", q] as const,
   fund: (code: number) => ["fund", code] as const,
   search: (q: string) => ["search", q] as const,
@@ -139,6 +140,9 @@ function useInvalidateAll() {
   const qc = useQueryClient();
   return () => qc.invalidateQueries();
 }
+
+export const useExposure = (scope: Scope) =>
+  useQuery({ queryKey: keys.exposure(scope), queryFn: () => api<Exposure>(`/portfolio/exposure?scope=${scope}`), placeholderData: keepPreviousData });
 
 export const useStockEntries = (symbol: string) =>
   useQuery({

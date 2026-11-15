@@ -74,9 +74,41 @@ export interface MfTransactionInput {
   note?: string | null;
 }
 
+export interface FundHolding {
+  name: string;
+  isin: string | null;
+  holding_type: string | null;
+  industry: string | null;
+  pct_nav: number;
+}
+
+export interface Exposure {
+  total: number;
+  companies: {
+    isin: string | null;
+    name: string;
+    symbol: string | null;
+    tracked: boolean;
+    direct: number;
+    total: number;
+    weight_pct: number | null;
+    via: { label: string; value: number }[];
+  }[];
+  companies_count: number;
+  sectors: { sector: string; value: number; weight_pct: number | null }[];
+  assets: { asset: string; value: number; weight_pct: number | null }[];
+  overlap: { a: string; b: string; pct: number }[];
+  coverage_pct: number | null;
+  as_of: string[];
+}
+
 export interface Fund extends Omit<MfScheme, "held"> {
   label: string;
   isin: string | null;
+  portfolio_as_of: string | null;
+  top_holdings: FundHolding[];
+  holdings_count: number;
+  sectors: { sector: string; pct: number }[];
   navs: { date: string; nav: number }[];
   transactions: MfTransaction[];
 }
@@ -129,7 +161,7 @@ export interface Portfolio {
 }
 
 
-export type AssetClass = "equity" | "debt" | "gold" | "silver" | "hybrid" | "other";
+export type AssetClass = "equity" | "debt" | "cash" | "gold" | "silver" | "hybrid" | "other";
 
 export interface Security {
   isin: string;

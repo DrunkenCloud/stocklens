@@ -20,6 +20,7 @@ const JOBS: Record<string, { label: string; detail: string }> = {
   refresh_securities: { label: "Refresh stock list", detail: "Re-download ICICI's list of NSE and BSE stocks used by search." },
   fetch_prices_backfill: { label: "Reload price history", detail: "Re-download full daily history since 2015. Takes a while." },
   onboard: { label: "Load new stock", detail: "" },
+  refresh_fund_portfolios: { label: "Update fund portfolios", detail: "Fetch the latest published holdings of every fund and ETF you own (for Exposure)." },
   refresh_mf: { label: "Update fund NAVs", detail: "Load every mutual fund's latest NAV from AMFI and fill in history for your funds." },
 };
 

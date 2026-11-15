@@ -71,6 +71,7 @@ const BROKER_COLORS: Record<string, string> = {
 export const ASSET_CLASS: Record<string, { label: string; color: string }> = {
   equity: { label: "Equity", color: "#387ed1" },
   debt: { label: "Debt", color: "#0a9b6e" },
+  cash: { label: "Cash", color: "#7fb7a4" },
   hybrid: { label: "Hybrid", color: "#8f6ed5" },
   gold: { label: "Gold", color: "#d9a520" },
   silver: { label: "Silver", color: "#9aa3ad" },

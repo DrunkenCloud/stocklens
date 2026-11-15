@@ -145,6 +145,50 @@ function FundView() {
       </div>
 
       <Panel
+        title={<>Portfolio {fund.holdings_count > 0 && <span className="font-normal text-muted-foreground">({fund.holdings_count} holdings)</span>}</>}
+        actions={fund.portfolio_as_of && <span className="text-[11px] text-muted-foreground">Disclosed by the fund house, as of {date(fund.portfolio_as_of)}</span>}
+      >
+        {fund.top_holdings.length === 0 ? (
+          <p className="py-6 text-center text-sm text-muted-foreground">This fund&apos;s portfolio hasn&apos;t been published yet. It loads automatically once it is.</p>
+        ) : (
+          <div className="grid gap-8 lg:grid-cols-2">
+            <div>
+              <h3 className="mb-2 text-xs font-medium text-muted-foreground">Top holdings</h3>
+              <ul className="num space-y-2">
+                {fund.top_holdings.map((h) => (
+                  <li key={`${h.isin ?? h.name}-${h.pct_nav}`}>
+                    <div className="flex items-baseline justify-between gap-3 text-[13px]">
+                      <span className="truncate">{h.name}</span>
+                      <span className="shrink-0 text-muted-foreground">{pct(h.pct_nav)}</span>
+                    </div>
+                    <div className="mt-1 h-1 rounded-full bg-muted">
+                      <div className="h-full rounded-full bg-foreground/70" style={{ width: `${(h.pct_nav / fund.top_holdings[0].pct_nav) * 100}%` }} />
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div>
+              <h3 className="mb-2 text-xs font-medium text-muted-foreground">Sectors</h3>
+              <ul className="num space-y-2">
+                {fund.sectors.slice(0, 15).map((x) => (
+                  <li key={x.sector}>
+                    <div className="flex items-baseline justify-between gap-3 text-[13px]">
+                      <span className="truncate">{x.sector}</span>
+                      <span className="shrink-0 text-muted-foreground">{pct(x.pct, { digits: 1 })}</span>
+                    </div>
+                    <div className="mt-1 h-1 rounded-full bg-muted">
+                      <div className="h-full rounded-full bg-accent-blue" style={{ width: `${(x.pct / fund.sectors[0].pct) * 100}%` }} />
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        )}
+      </Panel>
+
+      <Panel
         title="Your entries"
         actions={<Button size="sm" variant="outline" onClick={() => setForm({ open: true, target: { fund: picked } })}><PlusIcon /> Add entry</Button>}
         bodyClassName="p-0"

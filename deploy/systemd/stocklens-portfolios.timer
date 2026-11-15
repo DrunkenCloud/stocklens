@@ -1,0 +1,10 @@
+[Unit]
+Description=StockLens: fund and ETF portfolios (look-through)
+
+[Timer]
+OnCalendar=Wed,Sun 04:00 Asia/Kolkata
+Persistent=true
+Unit=stocklens-job@refresh_fund_portfolios.service
+
+[Install]
+WantedBy=timers.target
