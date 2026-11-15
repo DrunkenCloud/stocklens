@@ -27,3 +27,6 @@ dist/
 # breeze-connect creates this on import (cwd-relative)
 logs/
 pipeline/cron.log
+
+# Job run logs (pipeline/run.py)
+pipeline/logs/

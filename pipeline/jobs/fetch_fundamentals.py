@@ -1,17 +1,18 @@
 """Fetch fundamentals (Yahoo Finance) per active company, snapshot-append into
-`fundamentals`. This is the fragile job (02_DATA_SOURCES.md /
-03_PIPELINE.md) - per-symbol isolation so one bad/delisted symbol doesn't
-abort the run.
+`fundamentals` (one row per symbol per day, so history accumulates). Yahoo is
+the fragile source - per-symbol isolation so one bad/delisted symbol doesn't
+abort the run. No Breeze session needed.
 
-Usage: python -m pipeline.jobs.fetch_fundamentals
+Usage: python -m pipeline.jobs.fetch_fundamentals [--symbols ITC,TCS | --missing]
+  --missing: only companies with no fundamentals snapshot yet
 """
+import argparse
 import datetime as dt
-import os
 import sys
 
-import psycopg
 from psycopg.types.json import Json
 
+from pipeline.db import connect
 from pipeline.fundamentals_source import fetch_fundamentals
 
 COLUMNS = [
@@ -34,28 +35,48 @@ def upsert_snapshot(conn, symbol: str, snapshot_date: dt.date, data: dict) -> No
     conn.commit()
 
 
-def main() -> None:
-    conn = psycopg.connect(os.environ["DATABASE_URL"])
+def run(symbols: list[str] | None = None, missing_only: bool = False) -> list[str]:
+    """Snapshot fundamentals for active companies (or just `symbols`). Returns failed symbols."""
     today = dt.date.today()
     failures = []
 
-    with conn.cursor() as cur:
-        cur.execute("SELECT symbol FROM companies WHERE is_active ORDER BY symbol")
-        symbols = [r[0] for r in cur.fetchall()]
+    with connect() as conn:
+        rows = conn.execute(
+            """
+            SELECT c.symbol FROM companies c
+            WHERE c.is_active
+              AND (%(symbols)s::text[] IS NULL OR c.symbol = ANY(%(symbols)s::text[]))
+              AND (NOT %(missing)s OR NOT EXISTS (SELECT 1 FROM fundamentals f WHERE f.symbol = c.symbol))
+            ORDER BY c.symbol
+            """,
+            {"symbols": symbols, "missing": missing_only},
+        ).fetchall()
 
-    for symbol in symbols:
-        try:
-            data = fetch_fundamentals(symbol)
-            upsert_snapshot(conn, symbol, today, data)
-            print(f"{symbol}: pe={data['pe']} pb={data['pb']} roe={data['roe']}")
-        except Exception as e:
-            failures.append(symbol)
-            print(f"{symbol}: FAILED - {e}")
+        for (symbol,) in rows:
+            try:
+                data = fetch_fundamentals(symbol)
+                upsert_snapshot(conn, symbol, today, data)
+                print(f"{symbol}: pe={data['pe']} pb={data['pb']} roe={data['roe']}")
+            except Exception as e:
+                conn.rollback()
+                failures.append(symbol)
+                print(f"{symbol}: FAILED - {e}")
 
-    conn.close()
     if failures:
-        print(f"\n{len(failures)} symbol(s) failed: {failures}")
+        print(f"{len(failures)} symbol(s) failed: {failures}")
+    return failures
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--symbols", help="comma-separated; default all active companies")
+    parser.add_argument("--missing", action="store_true", help="only companies with no snapshot yet")
+    args = parser.parse_args()
+
+    failures = run(args.symbols.split(",") if args.symbols else None, missing_only=args.missing)
+    if failures:
         sys.exit(1)
+    print("fundamentals up to date")
 
 
 if __name__ == "__main__":

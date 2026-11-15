@@ -1,21 +1,23 @@
 """Fetch daily OHLCV from Breeze into daily_prices. Incremental by default.
 
 Usage:
-    python -m pipeline.jobs.fetch_prices              # incremental, all active companies
-    python -m pipeline.jobs.fetch_prices --backfill    # force full history for all active companies
+    python -m pipeline.jobs.fetch_prices                    # incremental, all active companies
+    python -m pipeline.jobs.fetch_prices --backfill          # full history for all active companies
+    python -m pipeline.jobs.fetch_prices --symbols ITC,TCS   # just these
 
-Per-symbol isolation: one symbol failing (bad breeze_code, transient API error
-after retries) is logged and skipped, never aborts the run (03_PIPELINE.md).
+New companies (no rows yet) get full history automatically. Per-symbol isolation:
+one symbol failing (bad breeze_code, transient API error after retries) is logged
+and skipped. An expired session aborts the whole run as "skipped" - every symbol
+would fail the same way.
 """
 import argparse
 import datetime as dt
-import os
 import sys
 import time
 
-import psycopg
-
-from pipeline.breeze_client import get_client
+from pipeline.breeze_client import SessionExpired, check_response, get_client, is_session_error
+from pipeline.db import connect
+from pipeline.run import SKIPPED_EXIT
 
 BACKFILL_START = dt.date(2015, 1, 1)  # matches the ~10yr history Breeze documents
 RETRIES = 3
@@ -64,7 +66,9 @@ def fetch_symbol(client, breeze_code: str, from_date: dt.date, to_date: dt.date)
                 exchange_code="NSE",
                 product_type="cash",
             )
-            return resp.get("Success") or []
+            return check_response(resp)
+        except SessionExpired:
+            raise
         except Exception as e:  # noqa: BLE001 - retried then surfaced to caller for per-symbol isolation
             last_err = e
             time.sleep(RETRY_BACKOFF_SECONDS * attempt)
@@ -87,49 +91,64 @@ def upsert_rows(conn, symbol: str, rows: list[dict]) -> None:
     conn.commit()
 
 
-def main() -> None:
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--backfill", action="store_true", help="fetch full history instead of incremental")
-    args = parser.parse_args()
-
+def run(symbols: list[str] | None = None, backfill: bool = False) -> list[str]:
+    """Fetch prices for active companies (or just `symbols`). Returns failed symbols;
+    raises SessionExpired if the Breeze session is missing/expired."""
     client = get_client()
-    conn = psycopg.connect(os.environ["DATABASE_URL"])
     today = dt.date.today()
     failures = []
 
-    with conn.cursor() as cur:
-        cur.execute("SELECT symbol, breeze_code FROM companies WHERE is_active")
-        companies = cur.fetchall()
+    with connect() as conn:
+        companies = conn.execute(
+            """
+            SELECT c.symbol, c.breeze_code, max(p.date)
+            FROM companies c LEFT JOIN daily_prices p ON p.symbol = c.symbol
+            WHERE c.is_active AND (%(symbols)s::text[] IS NULL OR c.symbol = ANY(%(symbols)s::text[]))
+            GROUP BY c.symbol, c.breeze_code ORDER BY c.symbol
+            """,
+            {"symbols": symbols},
+        ).fetchall()
 
-    for symbol, breeze_code in companies:
-        if not breeze_code:
-            # Breeze's stock_code often differs from the NSE ticker (confirmed live -
-            # e.g. M&M -> MAHMAH). Run map_breeze_codes.py first to populate this.
-            failures.append(symbol)
-            print(f"{symbol}: SKIPPED - no breeze_code set, run: python -m pipeline.jobs.map_breeze_codes")
-            continue
-
-        with conn.cursor() as cur:
-            cur.execute("SELECT max(date) FROM daily_prices WHERE symbol = %s", (symbol,))
-            (last_date,) = cur.fetchone()
-
-        from_date = incremental_from_date(last_date, today, args.backfill)
-        if from_date > today:
-            continue
-
-        try:
-            rows = fetch_symbol(client, breeze_code, from_date, today)
-            upsert_rows(conn, symbol, rows)
-            print(f"{symbol}: {len(rows)} rows ({from_date} -> {today})")
-        except Exception as e:
-            failures.append(symbol)
-            print(f"{symbol}: FAILED - {e}")
-
-    conn.close()
+        for symbol, breeze_code, last_date in companies:
+            if not breeze_code:
+                failures.append(symbol)
+                print(f"{symbol}: SKIPPED - no breeze_code (not in ICICI's security master?)")
+                continue
+            from_date = incremental_from_date(last_date, today, backfill)
+            if from_date > today:
+                continue
+            try:
+                rows = fetch_symbol(client, breeze_code, from_date, today)
+                upsert_rows(conn, symbol, rows)
+                print(f"{symbol}: {len(rows)} rows ({from_date} -> {today})")
+            except SessionExpired:
+                raise
+            except Exception as e:
+                conn.rollback()  # don't let one bad upsert poison the rest of the run
+                if is_session_error(e):
+                    raise SessionExpired(str(e)) from e
+                failures.append(symbol)
+                print(f"{symbol}: FAILED - {e}")
 
     if failures:
-        print(f"\n{len(failures)} symbol(s) failed: {failures}")
+        print(f"{len(failures)} symbol(s) failed: {failures}")
+    return failures
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--backfill", action="store_true", help="fetch full history instead of incremental")
+    parser.add_argument("--symbols", help="comma-separated; default all active companies")
+    args = parser.parse_args()
+
+    try:
+        failures = run(args.symbols.split(",") if args.symbols else None, backfill=args.backfill)
+    except SessionExpired as e:
+        print(f"skipped: Breeze session not valid ({e}) - log in to ICICI from the app")
+        sys.exit(SKIPPED_EXIT)
+    if failures:
         sys.exit(1)
+    print("prices up to date")
 
 
 if __name__ == "__main__":
