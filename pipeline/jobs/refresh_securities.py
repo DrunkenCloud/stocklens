@@ -6,7 +6,7 @@ from pipeline.db import connect
 from pipeline.securities import parse_security_master
 
 URL = "https://directlink.icicidirect.com/NewSecurityMaster/SecurityMaster.zip"
-COLUMNS = ["isin", "name", "nse_symbol", "breeze_code", "nse_series", "bse_code", "bse_symbol"]
+COLUMNS = ["isin", "name", "nse_symbol", "breeze_code", "nse_series", "bse_code", "bse_symbol", "bse_breeze_code", "kind", "asset_class"]
 
 
 def download() -> tuple[str, str]:
@@ -30,10 +30,13 @@ def main() -> None:
         )
         cur.execute(
             """
-            UPDATE companies c SET breeze_code = s.breeze_code, isin = s.isin
+            UPDATE companies c SET
+                breeze_code = CASE WHEN c.exchange = 'BSE' THEN s.bse_breeze_code ELSE s.breeze_code END,
+                isin = s.isin, kind = s.kind, asset_class = s.asset_class
             FROM securities s
-            WHERE s.nse_symbol = c.symbol
-              AND (c.breeze_code IS DISTINCT FROM s.breeze_code OR c.isin IS DISTINCT FROM s.isin)
+            WHERE ((c.exchange = 'NSE' AND s.nse_symbol = c.symbol) OR (c.exchange = 'BSE' AND s.isin = c.isin))
+              AND (c.breeze_code IS DISTINCT FROM CASE WHEN c.exchange = 'BSE' THEN s.bse_breeze_code ELSE s.breeze_code END
+                   OR c.isin IS DISTINCT FROM s.isin OR c.kind <> s.kind OR c.asset_class <> s.asset_class)
             """
         )
         updated = cur.rowcount

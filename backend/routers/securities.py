@@ -7,9 +7,9 @@ from jobs import spawn_job
 router = APIRouter()
 
 SEARCH_SQL = """
-SELECT s.isin, s.name, s.nse_symbol, s.bse_code, s.bse_symbol, (c.symbol IS NOT NULL) AS tracked
+SELECT s.isin, s.name, s.nse_symbol, s.bse_code, s.bse_symbol, s.kind, s.asset_class, (c.symbol IS NOT NULL) AS tracked
 FROM securities s
-LEFT JOIN companies c ON c.symbol = s.nse_symbol AND c.is_active
+LEFT JOIN companies c ON c.isin = s.isin AND c.is_active
 WHERE s.nse_symbol ILIKE %(prefix)s OR s.bse_symbol ILIKE %(prefix)s OR s.bse_code = %(q)s OR s.isin = upper(%(q)s)
    OR s.name ILIKE %(contains)s
 ORDER BY
@@ -49,22 +49,35 @@ def ensure_tracked(conn, *, isin: str | None = None, symbol: str | None = None) 
         existing = conn.execute("SELECT symbol, is_active FROM companies WHERE symbol = %s", (symbol,)).fetchone()
         if existing and existing["is_active"]:
             return symbol, False
-        sec = conn.execute("SELECT * FROM securities WHERE nse_symbol = %s", (symbol,)).fetchone()
+        sec = conn.execute(
+            "SELECT * FROM securities WHERE nse_symbol = %s OR (nse_symbol IS NULL AND bse_symbol = %s) ORDER BY nse_symbol NULLS LAST LIMIT 1",
+            (symbol, symbol),
+        ).fetchone()
     if sec is None:
         raise HTTPException(status_code=404, detail="Stock not found in the NSE/BSE list")
-    if not sec["nse_symbol"]:
-        raise HTTPException(status_code=422, detail="BSE-only stocks can't be tracked yet (prices come from NSE)")
 
+    on_nse = sec["nse_symbol"] is not None
+    row = {
+        "symbol": sec["nse_symbol"] if on_nse else sec["bse_symbol"],
+        "name": sec["name"],
+        "isin": sec["isin"],
+        "breeze_code": sec["breeze_code"] if on_nse else sec["bse_breeze_code"],
+        "exchange": "NSE" if on_nse else "BSE",
+        "kind": sec["kind"],
+        "asset_class": sec["asset_class"],
+    }
     created = conn.execute(
         """
-        INSERT INTO companies (symbol, name, isin, breeze_code) VALUES (%(nse_symbol)s, %(name)s, %(isin)s, %(breeze_code)s)
-        ON CONFLICT (symbol) DO UPDATE SET is_active = TRUE, isin = EXCLUDED.isin, breeze_code = EXCLUDED.breeze_code
+        INSERT INTO companies (symbol, name, isin, breeze_code, exchange, kind, asset_class)
+        VALUES (%(symbol)s, %(name)s, %(isin)s, %(breeze_code)s, %(exchange)s, %(kind)s, %(asset_class)s)
+        ON CONFLICT (symbol) DO UPDATE SET is_active = TRUE, isin = EXCLUDED.isin, breeze_code = EXCLUDED.breeze_code,
+            exchange = EXCLUDED.exchange, kind = EXCLUDED.kind, asset_class = EXCLUDED.asset_class
         WHERE NOT companies.is_active
         RETURNING symbol
         """,
-        sec,
+        row,
     ).fetchone()
-    return sec["nse_symbol"], created is not None
+    return row["symbol"], created is not None
 
 
 @router.get("/companies")

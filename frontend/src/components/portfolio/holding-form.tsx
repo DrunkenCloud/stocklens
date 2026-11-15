@@ -48,12 +48,8 @@ function FormBody({ holding, onDone }: { holding: Holding | null; onDone: () => 
   const avg = q > 0 && amt > 0 ? amt / q : null;
 
   const pick = (s: Security) => {
-    if (!s.nse_symbol) {
-      setError(`${s.name} is listed only on BSE. Only NSE-listed stocks can be tracked for now.`);
-      return;
-    }
     setError(null);
-    setStock({ name: s.name, symbol: s.nse_symbol, isin: s.isin });
+    setStock({ name: s.name, symbol: s.nse_symbol ?? s.bse_symbol, isin: s.isin });
   };
 
   const submit = (e: React.FormEvent) => {

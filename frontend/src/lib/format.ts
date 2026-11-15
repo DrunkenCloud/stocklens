@@ -68,6 +68,15 @@ const BROKER_COLORS: Record<string, string> = {
   Groww: "var(--broker-groww)",
 };
 
+export const ASSET_CLASS: Record<string, { label: string; color: string }> = {
+  equity: { label: "Equity", color: "#387ed1" },
+  debt: { label: "Debt", color: "#0a9b6e" },
+  hybrid: { label: "Hybrid", color: "#8f6ed5" },
+  gold: { label: "Gold", color: "#d9a520" },
+  silver: { label: "Silver", color: "#9aa3ad" },
+  other: { label: "Other", color: "#a0a0a0" },
+};
+
 export function brokerColor(broker: string): string {
   return BROKER_COLORS[broker] ?? "var(--broker-other)";
 }

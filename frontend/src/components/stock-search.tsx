@@ -8,8 +8,9 @@ import { SecurityResults } from "@/components/security-results";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 
-export function stockHref(s: { nse_symbol: string | null; isin: string }) {
-  return s.nse_symbol ? `/stock/?s=${encodeURIComponent(s.nse_symbol)}` : `/stock/?isin=${s.isin}`;
+export function stockHref(s: { nse_symbol: string | null; bse_symbol: string | null; isin: string; tracked: boolean }) {
+  const symbol = s.nse_symbol ?? s.bse_symbol;
+  return s.tracked && symbol ? `/stock/?s=${encodeURIComponent(symbol)}` : `/stock/?isin=${s.isin}`;
 }
 
 export function StockSearch({ className }: { className?: string }) {

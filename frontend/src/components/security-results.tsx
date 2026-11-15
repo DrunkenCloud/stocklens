@@ -33,7 +33,7 @@ export function SecurityResults({
                   <div className="text-xs text-muted-foreground">
                     {s.nse_symbol ?? s.bse_symbol}
                     <span className="ml-2">{s.exchanges.join(" + ")}</span>
-                    {!s.nse_symbol && <span className="ml-2">BSE only</span>}
+                    {s.kind === "etf" && <span className="ml-2">ETF</span>}
                   </div>
                 </div>
                 {s.tracked && <span className="shrink-0 rounded bg-secondary px-1.5 py-0.5 text-xs text-secondary-foreground">Tracked</span>}

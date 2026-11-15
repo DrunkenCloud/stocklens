@@ -53,6 +53,13 @@ def summarize(rows: list[dict]) -> dict:
     by_sector = [{"sector": s, "value": v, "weight_pct": _pct(v, total_value)}
                  for s, v in sorted(sectors.items(), key=lambda kv: -kv[1])]
 
+    classes: dict[str, float] = {}
+    for x in priced:
+        key = x.get("asset_class") or "equity"
+        classes[key] = classes.get(key, 0.0) + x["value"]
+    by_asset_class = [{"asset_class": k, "value": v, "weight_pct": _pct(v, total_value)}
+                      for k, v in sorted(classes.items(), key=lambda kv: -kv[1])]
+
     return {
         "holdings": holdings,
         "totals": {
@@ -66,4 +73,5 @@ def summarize(rows: list[dict]) -> dict:
         },
         "by_broker": by_broker,
         "by_sector": by_sector,
+        "by_asset_class": by_asset_class,
     }

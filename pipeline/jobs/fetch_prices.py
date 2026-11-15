@@ -36,7 +36,7 @@ def normalize_row(raw: dict) -> tuple:
     )
 
 
-def fetch_symbol(client, breeze_code: str, from_date: dt.date, to_date: dt.date) -> list[dict]:
+def fetch_symbol(client, breeze_code: str, from_date: dt.date, to_date: dt.date, exchange: str = "NSE") -> list[dict]:
     last_err = None
     for attempt in range(1, RETRIES + 1):
         try:
@@ -45,7 +45,7 @@ def fetch_symbol(client, breeze_code: str, from_date: dt.date, to_date: dt.date)
                 from_date=f"{from_date.isoformat()}T00:00:00.000Z",
                 to_date=f"{to_date.isoformat()}T00:00:00.000Z",
                 stock_code=breeze_code,
-                exchange_code="NSE",
+                exchange_code=exchange,
                 product_type="cash",
             )
             return check_response(resp)
@@ -81,15 +81,15 @@ def run(symbols: list[str] | None = None, backfill: bool = False) -> list[str]:
     with connect() as conn:
         companies = conn.execute(
             """
-            SELECT c.symbol, c.breeze_code, max(p.date)
+            SELECT c.symbol, c.breeze_code, c.exchange, max(p.date)
             FROM companies c LEFT JOIN daily_prices p ON p.symbol = c.symbol
             WHERE c.is_active AND (%(symbols)s::text[] IS NULL OR c.symbol = ANY(%(symbols)s::text[]))
-            GROUP BY c.symbol, c.breeze_code ORDER BY c.symbol
+            GROUP BY c.symbol, c.breeze_code, c.exchange ORDER BY c.symbol
             """,
             {"symbols": symbols},
         ).fetchall()
 
-        for symbol, breeze_code, last_date in companies:
+        for symbol, breeze_code, exchange, last_date in companies:
             if not breeze_code:
                 failures.append(symbol)
                 print(f"{symbol}: SKIPPED - no breeze_code (not in ICICI's security master?)")
@@ -98,7 +98,7 @@ def run(symbols: list[str] | None = None, backfill: bool = False) -> list[str]:
             if from_date > today:
                 continue
             try:
-                rows = fetch_symbol(client, breeze_code, from_date, today)
+                rows = fetch_symbol(client, breeze_code, from_date, today, exchange)
                 upsert_rows(conn, symbol, rows)
                 print(f"{symbol}: {len(rows)} rows ({from_date} -> {today})")
             except SessionExpired:

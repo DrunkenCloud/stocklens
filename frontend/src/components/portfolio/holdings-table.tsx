@@ -106,7 +106,11 @@ export function HoldingsTable({ holdings, onEdit, onAdd }: { holdings: Holding[]
                   <Link href={stockHref(h.symbol)} className="flex items-center gap-2">
                     <span className="h-6 w-0.5 shrink-0 rounded-full" style={{ background: brokerColor(h.broker) }} title={h.broker} />
                     <span className="min-w-0">
-                      <span className="block font-medium group-hover:text-accent-blue">{h.symbol}</span>
+                      <span className="flex items-center gap-1.5 font-medium group-hover:text-accent-blue">
+                        {h.symbol}
+                        {h.kind === "etf" && <span className="rounded bg-muted px-1 text-[10px] font-normal text-muted-foreground">ETF</span>}
+                        {h.exchange === "BSE" && <span className="rounded bg-muted px-1 text-[10px] font-normal text-muted-foreground">BSE</span>}
+                      </span>
                       <span className="block max-w-56 truncate text-[11px] text-muted-foreground">
                         {h.broker}{h.source === "icici_sync" ? " (synced)" : ""}
                       </span>

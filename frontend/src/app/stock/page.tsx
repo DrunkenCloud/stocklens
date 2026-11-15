@@ -163,7 +163,7 @@ function Position({ symbol }: { symbol: string }) {
 function Untracked({ query }: { query: string }) {
   const { data, isPending } = useSecuritySearch(query);
   const track = useTrack();
-  const security = data?.find((s) => s.nse_symbol === query || s.isin === query);
+  const security = data?.find((s) => s.isin === query || s.nse_symbol === query || (!s.nse_symbol && s.bse_symbol === query));
 
   if (isPending) return <Skeleton className="h-40 w-full" />;
   if (!security) return <p className="py-16 text-muted-foreground">No listed stock matches “{query}”.</p>;
@@ -177,24 +177,21 @@ function Untracked({ query }: { query: string }) {
             <span className="font-medium text-foreground">{security.nse_symbol ?? security.bse_symbol}</span>
             <span>{security.exchanges.join(", ")}</span>
             {security.bse_code && <span>BSE {security.bse_code}</span>}
+            {security.kind === "etf" && <span>ETF</span>}
             <span>{security.isin}</span>
           </div>
         </div>
-        {security.nse_symbol ? (
-          <Button
-            disabled={track.isPending}
-            onClick={() =>
-              track.mutate(security.isin, {
-                onSuccess: () => toast.success(`Tracking ${security.nse_symbol}. Price history and fundamentals are loading.`),
-                onError: (e) => toast.error(e.message),
-              })
-            }
-          >
-            {track.isPending ? "Adding…" : "Track this stock"}
-          </Button>
-        ) : (
-          <p className="max-w-xs text-sm text-muted-foreground">Listed only on BSE. Prices come from NSE, so it can&apos;t be tracked yet.</p>
-        )}
+        <Button
+          disabled={track.isPending}
+          onClick={() =>
+            track.mutate(security.isin, {
+              onSuccess: (r) => toast.success(`Tracking ${r.symbol}. Price history and fundamentals are loading.`),
+              onError: (e) => toast.error(e.message),
+            })
+          }
+        >
+          {track.isPending ? "Adding…" : "Track this"}
+        </Button>
       </div>
       <p className="mt-2 border-t border-border pt-3 text-sm text-muted-foreground">
         Tracking a stock loads its price history and fundamentals, adds it to the screener, and lets you add it as a holding.

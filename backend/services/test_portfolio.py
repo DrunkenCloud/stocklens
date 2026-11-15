@@ -3,16 +3,17 @@ from decimal import Decimal
 from services.portfolio import summarize
 
 
-def h(symbol, qty, invested, close, prev, broker, sector):
+def h(symbol, qty, invested, close, prev, broker, sector, asset_class="equity"):
     return {"id": symbol, "symbol": symbol, "name": symbol.title(), "sector": sector, "quantity": Decimal(qty),
             "invested": Decimal(invested), "broker": broker, "source": "manual",
             "close": None if close is None else Decimal(close), "prev_close": None if prev is None else Decimal(prev),
-            "price_date": None, "buy_date": None, "note": None}
+            "price_date": None, "buy_date": None, "note": None, "asset_class": asset_class, "kind": "stock"}
 
 
 ITC = h("ITC", "10", "4000", "450", "440", "Zerodha", "FMCG")
 TCS = h("TCS", "2", "7000", "3000", "3100", "ICICI", "IT")
 BEL = h("BEL", "5", "1500", None, None, "ICICI", None)
+GOLD = h("GOLDBEES", "10", "800", "100", "100", "Zerodha", None, "gold")
 
 
 def close(a, b):
@@ -52,8 +53,14 @@ def test_nothing_priced_or_nothing_held_does_not_divide_by_zero():
     assert empty["holdings"] == [] and empty["by_broker"] == [] and empty["totals"]["invested"] == 0.0, empty
 
 
+def test_asset_class_split_uses_current_value():
+    s = summarize([ITC, TCS, GOLD, BEL])
+    assert [(a["asset_class"], a["value"]) for a in s["by_asset_class"]] == [("equity", 10500.0), ("gold", 1000.0)], s["by_asset_class"]
+    assert close(sum(a["weight_pct"] for a in s["by_asset_class"]), 100.0)
+
+
 if __name__ == "__main__":
-    for t in (test_per_holding_numbers, test_totals_count_unpriced_in_invested_but_not_pnl,
+    for t in (test_asset_class_split_uses_current_value, test_per_holding_numbers, test_totals_count_unpriced_in_invested_but_not_pnl,
               test_broker_and_sector_breakdowns, test_nothing_priced_or_nothing_held_does_not_divide_by_zero):
         t()
         print(f"ok  {t.__name__}")

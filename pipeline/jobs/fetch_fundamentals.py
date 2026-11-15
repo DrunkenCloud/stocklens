@@ -38,8 +38,9 @@ def run(symbols: list[str] | None = None, missing_only: bool = False) -> list[st
     with connect() as conn:
         rows = conn.execute(
             """
-            SELECT c.symbol FROM companies c
-            WHERE c.is_active
+            SELECT c.symbol, c.exchange, s.bse_code FROM companies c
+            LEFT JOIN securities s ON s.isin = c.isin
+            WHERE c.is_active AND c.kind = 'stock'
               AND (%(symbols)s::text[] IS NULL OR c.symbol = ANY(%(symbols)s::text[]))
               AND (NOT %(missing)s OR NOT EXISTS (SELECT 1 FROM fundamentals f WHERE f.symbol = c.symbol))
             ORDER BY c.symbol
@@ -47,9 +48,9 @@ def run(symbols: list[str] | None = None, missing_only: bool = False) -> list[st
             {"symbols": symbols, "missing": missing_only},
         ).fetchall()
 
-        for (symbol,) in rows:
+        for symbol, exchange, bse_code in rows:
             try:
-                data = fetch_fundamentals(symbol)
+                data = fetch_fundamentals(symbol, exchange, bse_code)
                 upsert_snapshot(conn, symbol, today, data)
                 print(f"{symbol}: pe={data['pe']} pb={data['pb']} roe={data['roe']}")
             except Exception as e:

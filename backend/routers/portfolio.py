@@ -14,7 +14,7 @@ router = APIRouter()
 DEFAULT_USER_ID = "00000000-0000-0000-0000-000000000001"
 
 HOLDINGS_SQL = """
-SELECT h.id, h.symbol, c.name, c.sector, h.quantity, h.invested, h.broker, h.source, h.buy_date, h.note,
+SELECT h.id, h.symbol, c.name, c.sector, c.kind, c.asset_class, c.exchange, h.quantity, h.invested, h.broker, h.source, h.buy_date, h.note,
        p.close, p.prev_close, p.price_date
 FROM holdings h
 JOIN companies c ON c.symbol = h.symbol

@@ -4,7 +4,7 @@ import { useState } from "react";
 
 import { Donut, type DonutSlice } from "@/components/charts/donut";
 import { Panel, Segmented } from "@/components/panel";
-import { brokerColor, inrCompact, pct } from "@/lib/format";
+import { ASSET_CLASS, brokerColor, inrCompact, pct } from "@/lib/format";
 import type { Portfolio } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -21,10 +21,19 @@ function brokerSlices(p: Portfolio): DonutSlice[] {
   return p.by_broker.filter((b) => b.value > 0).map((b) => ({ key: b.broker, label: b.broker, value: b.value, color: brokerColor(b.broker) }));
 }
 
+function assetSlices(p: Portfolio): DonutSlice[] {
+  return p.by_asset_class.map((a) => ({
+    key: a.asset_class,
+    label: ASSET_CLASS[a.asset_class]?.label ?? a.asset_class,
+    value: a.value,
+    color: ASSET_CLASS[a.asset_class]?.color ?? "#a0a0a0",
+  }));
+}
+
 export function Allocation({ portfolio }: { portfolio: Portfolio }) {
-  const [by, setBy] = useState<"broker" | "sector">("broker");
+  const [by, setBy] = useState<"asset" | "broker" | "sector">("asset");
   const [active, setActive] = useState<string | null>(null);
-  const slices = by === "broker" ? brokerSlices(portfolio) : sectorSlices(portfolio);
+  const slices = by === "asset" ? assetSlices(portfolio) : by === "broker" ? brokerSlices(portfolio) : sectorSlices(portfolio);
   const total = slices.reduce((s, x) => s + x.value, 0);
   const focused = slices.find((s) => s.key === active);
 
@@ -35,7 +44,7 @@ export function Allocation({ portfolio }: { portfolio: Portfolio }) {
       title="Allocation"
       actions={
         <Segmented label="Group by" value={by} onChange={(v) => { setBy(v); setActive(null); }}
-          options={[{ value: "broker", label: "Broker" }, { value: "sector", label: "Sector" }]} />
+          options={[{ value: "asset", label: "Asset" }, { value: "broker", label: "Broker" }, { value: "sector", label: "Sector" }]} />
       }
     >
       {slices.length === 0 ? (

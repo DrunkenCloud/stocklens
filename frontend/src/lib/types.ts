@@ -13,6 +13,9 @@ export interface Holding {
   symbol: string;
   name: string;
   sector: string | null;
+  kind: "stock" | "etf";
+  asset_class: AssetClass;
+  exchange: "NSE" | "BSE";
   quantity: number;
   invested: number;
   broker: string;
@@ -50,6 +53,7 @@ export interface Portfolio {
   };
   by_broker: { broker: string; invested: number; value: number; pnl: number | null; pnl_pct: number | null; count: number }[];
   by_sector: { sector: string; value: number; weight_pct: number }[];
+  by_asset_class: { asset_class: AssetClass; value: number; weight_pct: number }[];
 }
 
 export interface HoldingInput {
@@ -62,12 +66,16 @@ export interface HoldingInput {
   note?: string | null;
 }
 
+export type AssetClass = "equity" | "debt" | "gold" | "silver" | "hybrid" | "other";
+
 export interface Security {
   isin: string;
   name: string;
   nse_symbol: string | null;
   bse_code: string | null;
   bse_symbol: string | null;
+  kind: "stock" | "etf";
+  asset_class: AssetClass;
   tracked: boolean;
   exchanges: ("NSE" | "BSE")[];
 }

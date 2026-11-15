@@ -30,25 +30,26 @@ def fetch_icici_holdings() -> list[tuple[str, float, float]]:
 def store_holdings(holdings: list[tuple[str, float, float]]) -> tuple[int, list[str]]:
     with connect() as conn:
         mapped = {
-            code: (symbol, name, isin)
-            for code, symbol, name, isin in conn.execute(
-                "SELECT breeze_code, nse_symbol, name, isin FROM securities WHERE nse_symbol IS NOT NULL AND breeze_code = ANY(%s)",
+            code: (symbol, name, isin, kind, asset_class)
+            for code, symbol, name, isin, kind, asset_class in conn.execute(
+                "SELECT breeze_code, nse_symbol, name, isin, kind, asset_class FROM securities WHERE nse_symbol IS NOT NULL AND breeze_code = ANY(%s)",
                 ([h[0] for h in holdings],),
             )
         }
         unmapped = [code for code, _, _ in holdings if code not in mapped]
         rows = [(code, *mapped[code], qty, avg) for code, qty, avg in holdings if code in mapped]
 
-        for code, symbol, name, isin, _, _ in rows:
+        for code, symbol, name, isin, kind, asset_class, _, _ in rows:
             conn.execute(
                 """
-                INSERT INTO companies (symbol, name, isin, breeze_code) VALUES (%s, %s, %s, %s)
-                ON CONFLICT (symbol) DO UPDATE SET is_active = TRUE, isin = EXCLUDED.isin, breeze_code = EXCLUDED.breeze_code
+                INSERT INTO companies (symbol, name, isin, breeze_code, kind, asset_class) VALUES (%s, %s, %s, %s, %s, %s)
+                ON CONFLICT (symbol) DO UPDATE SET is_active = TRUE, isin = EXCLUDED.isin, breeze_code = EXCLUDED.breeze_code,
+                    kind = EXCLUDED.kind, asset_class = EXCLUDED.asset_class
                 """,
-                (symbol, name, isin, code),
+                (symbol, name, isin, code, kind, asset_class),
             )
         conn.execute("DELETE FROM holdings WHERE user_id = %s AND source = 'icici_sync'", (USER_ID,))
-        for _, symbol, _, _, qty, avg in rows:
+        for _, symbol, _, _, _, _, qty, avg in rows:
             conn.execute(
                 """
                 INSERT INTO holdings (user_id, symbol, quantity, invested, broker, source)

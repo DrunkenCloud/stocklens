@@ -21,11 +21,20 @@ def _rev_cagr_3y(ticker: yf.Ticker) -> float | None:
     return _cagr_from_endpoints(revenue.iloc[-4], revenue.iloc[-1], years=3)
 
 
-def fetch_fundamentals(symbol: str) -> dict:
-    ticker = yf.Ticker(f"{symbol}.NS")
-    info = ticker.info
-    if info.get("regularMarketPrice") is None:
-        raise ValueError(f"no Yahoo Finance data for {symbol}.NS")
+def yahoo_tickers(symbol: str, exchange: str, bse_code: str | None) -> list[str]:
+    if exchange == "NSE":
+        return [f"{symbol}.NS"]
+    return [f"{symbol}.BO"] + ([f"{bse_code}.BO"] if bse_code else [])
+
+
+def fetch_fundamentals(symbol: str, exchange: str = "NSE", bse_code: str | None = None) -> dict:
+    for name in yahoo_tickers(symbol, exchange, bse_code):
+        ticker = yf.Ticker(name)
+        info = ticker.info
+        if info.get("regularMarketPrice") is not None:
+            break
+    else:
+        raise ValueError(f"no Yahoo Finance data for {symbol} ({exchange})")
 
     debt_to_equity = info.get("debtToEquity")
 
