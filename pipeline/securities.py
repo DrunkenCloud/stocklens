@@ -1,14 +1,3 @@
-"""Parse ICICI's SecurityMaster files (NSEScripMaster.txt / BSEScripMaster.txt from
-https://directlink.icicidirect.com/NewSecurityMaster/SecurityMaster.zip) into one
-row per listed equity, keyed by ISIN.
-
-Column meanings confirmed against the live file (Nov 2026):
-- NSE: ShortName = Breeze stock_code (RELIANCE -> RELIND, M&M -> MAHMAH),
-  ExchangeCode = NSE ticker, Series = EQ/BE/BZ/SM/ST for equities.
-- BSE: ScripCode = numeric BSE code (500325), ScripID = BSE ticker.
-- Equity filter: Indian equity ISINs are INE + 4-char issuer + '01' + ... (chars 7-8);
-  that drops bonds, NCDs, govt securities (INY / IN0 / other type codes).
-"""
 import csv
 import io
 import re
@@ -19,8 +8,6 @@ _SUFFIX = re.compile(r"\s+(LIMITED|LTD\.?)$")
 
 
 def clean_name(raw: str) -> str:
-    """'HDFC BANK LIMITED' -> 'HDFC Bank'. Words that look like acronyms (<=3 letters,
-    no vowels, or containing non-letters) stay uppercase; connectives go lowercase."""
     name = _SUFFIX.sub("", raw.strip().upper())
     words = []
     for i, w in enumerate(name.split()):
@@ -44,7 +31,6 @@ def _is_equity(isin: str) -> bool:
 
 
 def parse_security_master(nse_text: str, bse_text: str) -> list[dict]:
-    """Returns dicts with isin, name, nse_symbol, breeze_code, nse_series, bse_code, bse_symbol."""
     out: dict[str, dict] = {}
 
     for r in _rows(nse_text):

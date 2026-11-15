@@ -1,4 +1,3 @@
-"""Self-check for the pure logic in fetch_prices.py. Run: python -m pipeline.jobs.test_fetch_prices"""
 import datetime as dt
 
 from pipeline.jobs.fetch_prices import BACKFILL_START, incremental_from_date, normalize_row

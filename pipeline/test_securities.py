@@ -1,6 +1,3 @@
-"""Self-check for securities.parse_security_master. Run: python -m pipeline.test_securities
-Fixture rows follow the real SecurityMaster.zip format (quoted CSV, a space after
-each comma, header row), trimmed to the columns the parser reads."""
 from pipeline.securities import clean_name, parse_security_master
 
 NSE = '''"Token", "ShortName", "Series", "CompanyName", "DateOfDeListing", "ISINCode", "ExchangeCode"

@@ -1,11 +1,3 @@
-"""Fetch fundamentals (Yahoo Finance) per active company, snapshot-append into
-`fundamentals` (one row per symbol per day, so history accumulates). Yahoo is
-the fragile source - per-symbol isolation so one bad/delisted symbol doesn't
-abort the run. No Breeze session needed.
-
-Usage: python -m pipeline.jobs.fetch_fundamentals [--symbols ITC,TCS | --missing]
-  --missing: only companies with no fundamentals snapshot yet
-"""
 import argparse
 import datetime as dt
 import sys
@@ -32,8 +24,6 @@ def upsert_snapshot(conn, symbol: str, snapshot_date: dt.date, data: dict) -> No
             """,
             [symbol, snapshot_date, *(data[c] for c in COLUMNS), Json(data["raw"])],
         )
-        # Stocks tracked via search/ICICI sync arrive without a sector; Yahoo's fills the gap
-        # (hand-seeded sectors are kept).
         cur.execute(
             "UPDATE companies SET sector = %s WHERE symbol = %s AND sector IS NULL",
             (data["raw"].get("sector"), symbol),
@@ -42,7 +32,6 @@ def upsert_snapshot(conn, symbol: str, snapshot_date: dt.date, data: dict) -> No
 
 
 def run(symbols: list[str] | None = None, missing_only: bool = False) -> list[str]:
-    """Snapshot fundamentals for active companies (or just `symbols`). Returns failed symbols."""
     today = dt.date.today()
     failures = []
 

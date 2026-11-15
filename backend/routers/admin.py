@@ -1,6 +1,3 @@
-"""Admin panel: trigger pipeline jobs and read their history/logs (job_runs).
-Jobs run as detached subprocesses via jobs.spawn_job - no queue, no auth (the
-whole app is single-user and unauthenticated by design)."""
 import pathlib
 
 from fastapi import APIRouter, HTTPException, Query
@@ -10,7 +7,7 @@ from jobs import JOBS, JobAlreadyRunning, mark_stale_runs, spawn_job
 
 router = APIRouter()
 
-TRIGGERABLE = [name for name in JOBS if name != "onboard"]  # onboard needs symbols; started by tracking a stock
+TRIGGERABLE = [name for name in JOBS if name != "onboard"]
 LOG_TAIL_CHARS = 8000
 
 

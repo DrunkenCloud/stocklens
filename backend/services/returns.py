@@ -1,8 +1,3 @@
-"""Return calculations over a daily_prices close series. Pure functions - see
-05_SCHEMA_AND_API.md for the formulas and the honesty notes behind each guard.
-
-Callers must pass dates/closes already sorted ascending by date.
-"""
 import datetime as dt
 
 
@@ -13,7 +8,7 @@ def total_return_pct(close_start: float, close_end: float) -> float:
 def cagr_pct(close_start: float, close_end: float, date_start: dt.date, date_end: dt.date) -> float | None:
     years = (date_end - date_start).days / 365.25
     if years < 1:
-        return None  # annualizing a sub-1yr period is mathematically valid but misleading
+        return None
     return ((close_end / close_start) ** (1 / years) - 1) * 100
 
 
@@ -47,7 +42,6 @@ def best_worst_year(dates: list[dt.date], closes: list[float]) -> tuple[dict, di
 
 
 def compute_returns(dates: list[dt.date], closes: list[float], amount: float) -> dict:
-    """dates/closes: parallel, sorted ascending, non-empty."""
     close_start, close_end = closes[0], closes[-1]
     date_start, date_end = dates[0], dates[-1]
     best_year, worst_year = best_worst_year(dates, closes)

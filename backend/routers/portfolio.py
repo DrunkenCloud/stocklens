@@ -1,6 +1,3 @@
-"""Holdings across brokers. ICICI rows (source='icici_sync') are replaced on each
-sync and read-only here; Zerodha/Groww/other rows are entered by hand as
-quantity + total invested. Adding a holding for an untracked stock tracks it."""
 import datetime as dt
 import uuid
 
@@ -14,7 +11,7 @@ from services.portfolio import summarize
 
 router = APIRouter()
 
-DEFAULT_USER_ID = "00000000-0000-0000-0000-000000000001"  # single-user app, seeded by migration 001
+DEFAULT_USER_ID = "00000000-0000-0000-0000-000000000001"
 
 HOLDINGS_SQL = """
 SELECT h.id, h.symbol, c.name, c.sector, h.quantity, h.invested, h.broker, h.source, h.buy_date, h.note,
@@ -58,9 +55,6 @@ WHERE rn <= %s
 GROUP BY symbol
 """
 
-# Value of the holdings you have *today* (that have prices), priced at each past day's close. Only days
-# where every current holding has a price (so the line doesn't jump when a stock's
-# history starts). Not your actual past portfolio - quantities aren't back-dated.
 HISTORY_SQL = """
 WITH held AS (
     SELECT symbol, sum(quantity) AS qty FROM holdings h

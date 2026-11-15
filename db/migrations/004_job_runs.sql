@@ -1,5 +1,3 @@
--- Every pipeline job run (cron, admin button, or automatic after login), written by
--- pipeline/run.py. The admin panel and "last synced" read from here.
 CREATE TABLE job_runs (
     id          BIGSERIAL PRIMARY KEY,
     job         TEXT NOT NULL,

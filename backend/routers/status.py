@@ -1,5 +1,3 @@
-"""What the app shows in its header: is the ICICI session usable, when did the
-last sync finish, what's running right now."""
 import datetime as dt
 
 from fastapi import APIRouter

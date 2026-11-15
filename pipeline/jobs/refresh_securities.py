@@ -1,10 +1,3 @@
-"""Download ICICI's SecurityMaster.zip and upsert every listed equity into
-`securities` (powers stock search), then copy Breeze codes / ISINs onto tracked
-companies. Public file, no Breeze session needed. Weekly cron + run by sync_icici
-when stale.
-
-Usage: python -m pipeline.jobs.refresh_securities
-"""
 import io
 import urllib.request
 import zipfile
@@ -19,7 +12,7 @@ COLUMNS = ["isin", "name", "nse_symbol", "breeze_code", "nse_series", "bse_code"
 def download() -> tuple[str, str]:
     with urllib.request.urlopen(URL, timeout=60) as resp:
         archive = zipfile.ZipFile(io.BytesIO(resp.read()))
-    read = lambda name: archive.read(name).decode("latin-1")  # noqa: E731
+    read = lambda name: archive.read(name).decode("latin-1")
     return read("NSEScripMaster.txt"), read("BSEScripMaster.txt")
 
 

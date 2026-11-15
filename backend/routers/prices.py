@@ -50,5 +50,5 @@ def get_returns(
     dates = [r["date"] for r in rows]
     closes = [float(r["close"]) for r in rows]
     result = compute_returns(dates, closes, amount)
-    result["is_price_return_only"] = True  # not dividend-adjusted - the UI says so
+    result["is_price_return_only"] = True
     return result

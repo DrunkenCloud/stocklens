@@ -1,13 +1,3 @@
-"""Run one pipeline job and record it in `job_runs` (status, log file, summary).
-
-Usage: python -m pipeline.run <job_module> [job args...] [--trigger cron|admin|auto] [--run-id N]
-  e.g. python -m pipeline.run jobs.fetch_prices --backfill
---run-id: the backend pre-creates the row (so it can return the id immediately);
-          otherwise a new row is inserted. Called by run_job.sh (cron + backend).
-
-Jobs signal "nothing to do / can't run right now" (e.g. no valid Breeze session)
-by exiting with SKIPPED_EXIT, recorded as status 'skipped' rather than 'failed'.
-"""
 import argparse
 import pathlib
 import subprocess

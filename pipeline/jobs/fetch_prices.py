@@ -1,15 +1,3 @@
-"""Fetch daily OHLCV from Breeze into daily_prices. Incremental by default.
-
-Usage:
-    python -m pipeline.jobs.fetch_prices                    # incremental, all active companies
-    python -m pipeline.jobs.fetch_prices --backfill          # full history for all active companies
-    python -m pipeline.jobs.fetch_prices --symbols ITC,TCS   # just these
-
-New companies (no rows yet) get full history automatically. Per-symbol isolation:
-one symbol failing (bad breeze_code, transient API error after retries) is logged
-and skipped. An expired session aborts the whole run as "skipped" - every symbol
-would fail the same way.
-"""
 import argparse
 import datetime as dt
 import sys
@@ -19,24 +7,18 @@ from pipeline.breeze_client import SessionExpired, check_response, get_client, i
 from pipeline.db import connect
 from pipeline.run import SKIPPED_EXIT
 
-BACKFILL_START = dt.date(2015, 1, 1)  # matches the ~10yr history Breeze documents
+BACKFILL_START = dt.date(2015, 1, 1)
 RETRIES = 3
 RETRY_BACKOFF_SECONDS = 5
 
 
 def incremental_from_date(last_date: dt.date | None, today: dt.date, backfill: bool) -> dt.date:
-    """Pure: decide the from-date for one symbol given its last stored date."""
     if backfill or last_date is None:
         return BACKFILL_START
     return last_date + dt.timedelta(days=1)
 
 
 def normalize_row(raw: dict) -> tuple:
-    """Pure: one Breeze historical-data record -> (date, open, high, low, close, volume).
-
-    Field names and types (strings, e.g. "1291.9") confirmed against a live
-    get_historical_data response.
-    """
     date_str = raw["datetime"][:10]
 
     def num(key):
@@ -69,7 +51,7 @@ def fetch_symbol(client, breeze_code: str, from_date: dt.date, to_date: dt.date)
             return check_response(resp)
         except SessionExpired:
             raise
-        except Exception as e:  # noqa: BLE001 - retried then surfaced to caller for per-symbol isolation
+        except Exception as e:
             last_err = e
             time.sleep(RETRY_BACKOFF_SECONDS * attempt)
     raise RuntimeError(f"failed after {RETRIES} attempts: {last_err}") from last_err
@@ -92,8 +74,6 @@ def upsert_rows(conn, symbol: str, rows: list[dict]) -> None:
 
 
 def run(symbols: list[str] | None = None, backfill: bool = False) -> list[str]:
-    """Fetch prices for active companies (or just `symbols`). Returns failed symbols;
-    raises SessionExpired if the Breeze session is missing/expired."""
     client = get_client()
     today = dt.date.today()
     failures = []
@@ -124,7 +104,7 @@ def run(symbols: list[str] | None = None, backfill: bool = False) -> list[str]:
             except SessionExpired:
                 raise
             except Exception as e:
-                conn.rollback()  # don't let one bad upsert poison the rest of the run
+                conn.rollback()
                 if is_session_error(e):
                     raise SessionExpired(str(e)) from e
                 failures.append(symbol)

@@ -1,14 +1,3 @@
-"""Everything that should happen after the daily ICICI login - spawned by the
-backend's Breeze callback, also runnable by hand / from the admin panel:
-
-  1. refresh the securities list if it's empty or a week old
-  2. pull ICICI holdings, start tracking any stock not tracked yet
-  3. replace the synced ICICI holdings (manual Zerodha/Groww rows untouched)
-  4. bring prices up to date (new stocks get full history)
-  5. fundamentals for stocks that have none yet
-
-Usage: python -m pipeline.jobs.sync_icici
-"""
 import datetime as dt
 import sys
 
@@ -18,7 +7,7 @@ from pipeline.holdings import parse_portfolio_holdings
 from pipeline.jobs import fetch_fundamentals, fetch_prices, refresh_securities
 from pipeline.run import SKIPPED_EXIT
 
-USER_ID = "00000000-0000-0000-0000-000000000001"  # single-user app, seeded by db/migrations/001
+USER_ID = "00000000-0000-0000-0000-000000000001"
 SECURITIES_MAX_AGE = dt.timedelta(days=7)
 
 
@@ -31,8 +20,6 @@ def refresh_securities_if_stale() -> None:
 
 def fetch_icici_holdings() -> list[tuple[str, float, float]]:
     client = get_client()
-    # NSE only for now: whether exchange_code="BSE" returns the same demat holdings
-    # again (double count) or BSE-bought lots is unverified - check live first.
     resp = client.get_portfolio_holdings(exchange_code="NSE")
     if isinstance(resp, dict) and resp.get("Error") and is_session_error(Exception(str(resp["Error"]))):
         mark_session_invalid()
@@ -41,7 +28,6 @@ def fetch_icici_holdings() -> list[tuple[str, float, float]]:
 
 
 def store_holdings(holdings: list[tuple[str, float, float]]) -> tuple[int, list[str]]:
-    """One transaction: track unknown stocks, replace icici_sync rows. Returns (stored, unmapped codes)."""
     with connect() as conn:
         mapped = {
             code: (symbol, name, isin)
@@ -80,7 +66,7 @@ def main() -> None:
     except SessionExpired as e:
         print(f"skipped: Breeze session not valid ({e}) - log in to ICICI from the app")
         sys.exit(SKIPPED_EXIT)
-    except Exception as e:  # unexpected shape (ValueError) or Breeze login/API failure
+    except Exception as e:
         print(f"FAILED reading ICICI holdings - stored holdings left unchanged: {e}")
         sys.exit(1)
 

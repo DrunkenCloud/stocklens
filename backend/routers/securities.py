@@ -1,6 +1,3 @@
-"""Stock search over every listed equity (`securities`, from ICICI's security
-master) and tracking: a tracked stock is a row in `companies`, which the
-pipeline fetches prices/fundamentals for."""
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
 
@@ -45,8 +42,6 @@ def search(q: str = Query(..., min_length=1, max_length=60), limit: int = Query(
 
 
 def ensure_tracked(conn, *, isin: str | None = None, symbol: str | None = None) -> tuple[str, bool]:
-    """Make sure the stock (by ISIN, or NSE symbol) is a tracked company.
-    Returns (nse_symbol, newly_tracked). Raises 404/422 HTTPExceptions."""
     if isin:
         sec = conn.execute("SELECT * FROM securities WHERE isin = %s", (isin,)).fetchone()
     else:

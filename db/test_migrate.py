@@ -1,10 +1,3 @@
-"""Self-check for db/migrate.py against a throwaway database.
-Run: python db/test_migrate.py   (needs DATABASE_URL pointing at a server where
-the role can CREATE DATABASE - the local docker-compose Postgres works).
-
-Simulates prod: apply only the baseline (= the v1 schema), insert a v1-shaped
-holding, then apply the rest and check the holding was carried over.
-"""
 import os
 import pathlib
 import sys
@@ -14,7 +7,7 @@ import psycopg
 from psycopg import conninfo
 
 sys.path.insert(0, str(pathlib.Path(__file__).parent))
-from migrate import apply_migrations, load_env  # noqa: E402
+from migrate import apply_migrations, load_env
 
 USER_ID = "00000000-0000-0000-0000-000000000001"
 

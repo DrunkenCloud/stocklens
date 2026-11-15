@@ -1,12 +1,3 @@
-"""Portfolio summary math. Pure: takes holding rows joined with their latest and
-previous close, returns per-holding numbers plus totals and breakdowns.
-
-A holding with no price yet (just tracked, history still loading) counts toward
-"invested" but not toward value / P&L - totals' pnl_pct is measured against
-priced_invested so an unpriced holding doesn't read as a loss.
-"""
-
-
 def _f(v) -> float | None:
     return None if v is None else float(v)
 

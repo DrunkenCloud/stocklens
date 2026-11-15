@@ -1,4 +1,3 @@
-"""Self-check for portfolio.summarize. Run (from backend/): python -m services.test_portfolio"""
 from decimal import Decimal
 
 from services.portfolio import summarize
@@ -13,7 +12,7 @@ def h(symbol, qty, invested, close, prev, broker, sector):
 
 ITC = h("ITC", "10", "4000", "450", "440", "Zerodha", "FMCG")
 TCS = h("TCS", "2", "7000", "3000", "3100", "ICICI", "IT")
-BEL = h("BEL", "5", "1500", None, None, "ICICI", None)  # just tracked, no price yet
+BEL = h("BEL", "5", "1500", None, None, "ICICI", None)
 
 
 def close(a, b):

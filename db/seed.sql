@@ -1,7 +1,3 @@
--- Starter watchlist: well-known NSE (NIFTY-50-ish) symbols. Applied by
--- `python db/migrate.py --seed`; idempotent. breeze_code/isin get filled in by
--- the refresh_securities job.
-
 INSERT INTO companies (symbol, name, sector) VALUES
     ('RELIANCE',   'Reliance Industries Ltd',          'Energy'),
     ('TCS',        'Tata Consultancy Services Ltd',    'IT'),
@@ -28,9 +24,6 @@ INSERT INTO companies (symbol, name, sector) VALUES
     ('POWERGRID',  'Power Grid Corporation of India Ltd','Power'),
     ('M&M',        'Mahindra & Mahindra Ltd',           'Automobile'),
     ('TATASTEEL',  'Tata Steel Ltd',                     'Metals'),
-    -- TATAMOTORS demerged (2025) into two separately-listed NSE symbols;
-    -- the old ticker is gone, confirmed by both Breeze and Yahoo Finance
-    -- returning "not found" for it.
     ('TMCV',       'Tata Motors Ltd (Commercial Vehicles)', 'Automobile'),
     ('TMPV',       'Tata Motors Passenger Vehicles Ltd',    'Automobile'),
     ('ADANIENT',   'Adani Enterprises Ltd',             'Diversified'),
@@ -38,4 +31,3 @@ INSERT INTO companies (symbol, name, sector) VALUES
     ('JSWSTEEL',   'JSW Steel Ltd',                      'Metals'),
     ('BAJAJFINSV', 'Bajaj Finserv Ltd',                 'Financials')
 ON CONFLICT (symbol) DO NOTHING;
-

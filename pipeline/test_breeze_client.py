@@ -1,21 +1,17 @@
-"""Self-check: python -m pipeline.test_breeze_client"""
 from pipeline.breeze_client import check_response, is_session_error
 from pipeline.run import status_for
 
 
 def test_recognizes_expired_session_errors():
-    # Exact text seen live from generate_session() on a day-old token (Nov 2026).
     assert is_session_error(Exception("Unexpected error: Session key is expired."))
     assert is_session_error(RuntimeError("SESSION KEY IS EXPIRED"))
     assert is_session_error(Exception("Invalid Session"))
-    # breeze_connect config.py SESSIONKEY_INCORRECT, raised for a wrong/garbled token
     assert is_session_error(Exception("Unexpected error: Could not authenticate credentials. Please check session key."))
 
 
 def test_other_errors_are_not_session_errors():
     assert not is_session_error(Exception("Connection reset by peer"))
     assert not is_session_error(KeyError("Success"))
-    # SDK catch-all for any other customer-details failure - could be transient, so not a session verdict
     assert not is_session_error(Exception("Unable to retrieve customer details at the moment. Please try again later."))
     assert not is_session_error(Exception("Could not authenticate credentials. Please check api key."))
 

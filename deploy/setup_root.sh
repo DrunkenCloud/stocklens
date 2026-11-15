@@ -1,13 +1,4 @@
 #!/usr/bin/env bash
-# One-time root setup for deploying StockLens on the VPS. Run this YOURSELF
-# (sudo will prompt for your own password locally - it's never sent to or
-# seen by Claude, which cannot run privileged commands over a non-interactive
-# SSH session). See 06_DECISIONS.md D10 for why this is the entire root
-# footprint: one apt install, one DB role/database, one linger enable.
-# Everything else in the deploy runs as your regular user, no sudo needed.
-#
-# Usage: scp this to the VM (or it'll already be there via the rsync step),
-# then: bash deploy/setup_root.sh
 set -euo pipefail
 
 echo "==> Installing PostgreSQL and python3-venv"

@@ -1,6 +1,3 @@
-"""Self-check: python -m pipeline.test_holdings
-Shape follows Breeze's documented get_portfolio_holdings response (strings for
-numbers) - NOT yet confirmed live; see holdings.py."""
 from pipeline.holdings import parse_portfolio_holdings
 
 

@@ -1,5 +1,3 @@
--- Holdings are entered as "how many shares, how much I put in" per broker, and ICICI
--- rows are synced (replaced wholesale on each sync) rather than typed.
 ALTER TABLE holdings
     ADD COLUMN broker   TEXT,
     ADD COLUMN source   TEXT NOT NULL DEFAULT 'manual' CHECK (source IN ('manual', 'icici_sync')),
