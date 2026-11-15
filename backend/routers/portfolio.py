@@ -6,7 +6,7 @@ from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field, model_validator
 
 from db import pool
-from holdings import DEFAULT_USER_ID, exposure_from_rows, growth, holding_rows, load_ledger
+from holdings import DEFAULT_USER_ID, exposure_breakdown, exposure_from_rows, growth, holding_rows, load_ledger
 from jobs import spawn_job
 from routers.securities import ensure_tracked
 from services.ledger import positions
@@ -34,6 +34,13 @@ def get_exposure(scope: str = Scope):
     with pool.connection() as conn:
         rows, _ = holding_rows(conn, scope)
         return exposure_from_rows(conn, rows)
+
+
+@router.get("/portfolio/exposure/breakdown")
+def get_exposure_breakdown(key: str = Query(..., pattern="^(asset|sector|kind):.{1,80}$"), scope: str = Scope):
+    with pool.connection() as conn:
+        rows, _ = holding_rows(conn, scope)
+        return exposure_breakdown(conn, rows, key)
 
 
 @router.get("/portfolio/growth")

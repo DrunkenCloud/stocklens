@@ -177,7 +177,39 @@ def _load_portfolios(conn, pids: list[str]) -> dict[str, list[dict]]:
     return out
 
 
+def _attach_links(conn, entries: list[dict]) -> None:
+    isins = sorted({e["isin"] for e in entries if e["isin"]})
+    links = {r["isin"]: r for r in conn.execute(
+        """
+        SELECT s.isin, coalesce(c.symbol, s.nse_symbol, s.bse_symbol) AS symbol, c.symbol IS NOT NULL AS tracked
+        FROM securities s LEFT JOIN companies c ON c.isin = s.isin WHERE s.isin = ANY(%s)
+        """,
+        (isins,),
+    )} if isins else {}
+    for e in entries:
+        link = links.get(e["isin"])
+        e["symbol"] = link["symbol"] if link else None
+        e["tracked"] = bool(link and link["tracked"])
+
+
+def exposure_breakdown(conn, rows: list[dict], key: str) -> dict:
+    entry = _look_through_rows(conn, rows)[0]["breakdown"].get(key) or {"value": 0.0, "holdings": [], "items": []}
+    _attach_links(conn, entry["items"])
+    return {"key": key, **entry}
+
+
 def exposure_from_rows(conn, rows: list[dict]) -> dict:
+    result, as_of = _look_through_rows(conn, rows)
+    result.pop("breakdown")
+    top = result["companies"][:TOP_COMPANIES]
+    _attach_links(conn, top)
+    result["companies_count"] = len(result["companies"])
+    result["companies"] = top
+    result["as_of"] = sorted(d.isoformat() for d in as_of)
+    return result
+
+
+def _look_through_rows(conn, rows: list[dict]) -> tuple[dict, set]:
     priced = [{**r, "value": r["quantity"] * r["close"]} for r in rows if r["close"] is not None]
     symbols = sorted({r["symbol"] for r in priced if r["kind"] != "mf"})
     codes = sorted({int(r["symbol"]) for r in priced if r["kind"] == "mf"})
@@ -220,21 +252,4 @@ def exposure_from_rows(conn, rows: list[dict]) -> dict:
         (stock_isins,),
     )} if stock_isins else {}
 
-    result = look_through(list(items.values()), portfolios, industry_by_isin)
-    top = result["companies"][:TOP_COMPANIES]
-    isins = [c["isin"] for c in top if c["isin"]]
-    links = {r["isin"]: r for r in conn.execute(
-        """
-        SELECT s.isin, coalesce(c.symbol, s.nse_symbol, s.bse_symbol) AS symbol, c.symbol IS NOT NULL AS tracked
-        FROM securities s LEFT JOIN companies c ON c.isin = s.isin WHERE s.isin = ANY(%s)
-        """,
-        (isins,),
-    )} if isins else {}
-    for c in top:
-        link = links.get(c["isin"])
-        c["symbol"] = link["symbol"] if link else None
-        c["tracked"] = bool(link and link["tracked"])
-    result["companies_count"] = len(result["companies"])
-    result["companies"] = top
-    result["as_of"] = sorted(d.isoformat() for d in as_of)
-    return result
+    return look_through(list(items.values()), portfolios, industry_by_isin), as_of

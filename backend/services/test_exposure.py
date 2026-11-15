@@ -43,6 +43,23 @@ def test_sectors_cover_equity_only_grouped_by_macro_sector_with_industries():
     assert r["equity_total"] == 3800.0
 
 
+def test_breakdown_lists_contributing_holdings_and_underlying_items():
+    r = look_through(ITEMS, PORTFOLIOS, {"INE040A01034": "Banks"})
+    fin = r["breakdown"]["sector:Financial Services"]
+    assert fin["value"] == 2700.0
+    assert [(h["label"], h["value"]) for h in fin["holdings"]] == [("Fund One", 1200.0), ("HDFC Bank", 1000.0), ("Fund Two", 500.0)], fin
+    assert [(i["name"], i["tag"], i["value"], i["direct"]) for i in fin["items"]] == [("HDFC Bank", "Banks", 2700.0, 1000.0)], fin
+
+    debt = r["breakdown"]["asset:debt"]
+    assert [(h["label"], h["value"]) for h in debt["holdings"]] == [("Mystery Fund", 500.0), ("Fund One", 200.0)], debt
+    assert [(i["name"], i["tag"], i["value"]) for i in debt["items"]] == [
+        ("Mystery Fund", "Holdings not published", 500.0), ("TREPS", "Money market", 200.0)], debt
+
+    mf = r["breakdown"]["kind:mf"]
+    assert [h["label"] for h in mf["holdings"]] == ["Fund One", "Fund Two", "Mystery Fund"] and mf["items"] == []
+    assert "breakdown" in r and all(k.split(":")[0] in ("asset", "sector", "kind") for k in r["breakdown"])
+
+
 def test_assets_split_by_holding_type():
     assets = {a["asset"]: a["value"] for a in look_through(ITEMS, PORTFOLIOS, {})["assets"]}
     assert assets == {"equity": 3800.0, "debt": 700.0}, assets

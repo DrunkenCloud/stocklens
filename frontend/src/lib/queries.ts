@@ -5,7 +5,7 @@ import { useEffect, useRef } from "react";
 
 import { api } from "@/lib/api";
 import type {
-  Company, Exposure, Fund, Growth, JobRun, MfScheme, MfTransactionInput, Portfolio, Scope, StockTransaction, StockTransactionInput, PricePoint, Returns, ScreenRow, Security, Status, Stock,
+  Company, Exposure, ExposureBreakdown, Fund, Growth, JobRun, MfScheme, MfTransactionInput, Portfolio, Scope, StockTransaction, StockTransactionInput, PricePoint, Returns, ScreenRow, Security, Status, Stock,
 } from "@/lib/types";
 
 export const keys = {
@@ -14,6 +14,7 @@ export const keys = {
   growth: (days: number, scope: Scope) => ["growth", days, scope] as const,
   entries: (symbol: string) => ["entries", symbol] as const,
   exposure: (scope: Scope) => ["exposure", scope] as const,
+  breakdown: (scope: Scope, key: string) => ["exposure", scope, key] as const,
   mfSearch: (q: string) => ["mf-search", q] as const,
   fund: (code: number) => ["fund", code] as const,
   search: (q: string) => ["search", q] as const,
@@ -143,6 +144,13 @@ function useInvalidateAll() {
 
 export const useExposure = (scope: Scope) =>
   useQuery({ queryKey: keys.exposure(scope), queryFn: () => api<Exposure>(`/portfolio/exposure?scope=${scope}`), placeholderData: keepPreviousData });
+
+export const useExposureBreakdown = (scope: Scope, key: string | null) =>
+  useQuery({
+    queryKey: keys.breakdown(scope, key ?? ""),
+    queryFn: () => api<ExposureBreakdown>(`/portfolio/exposure/breakdown?scope=${scope}&key=${encodeURIComponent(key!)}`),
+    enabled: !!key,
+  });
 
 export const useStockEntries = (symbol: string) =>
   useQuery({

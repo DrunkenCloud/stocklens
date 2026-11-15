@@ -69,6 +69,20 @@ def look_through(items: list[dict], portfolios: dict[str, list[dict]], industry_
     assets: dict[str, float] = {}
     fund_value = covered_value = 0.0
     fund_weights: dict[str, dict] = {}
+    detail: dict[str, dict] = {}
+
+    def contribute(groups: list[str], holding: str, kind: str, value: float, item: dict | None) -> None:
+        for g in groups:
+            d = detail.setdefault(g, {"value": 0.0, "holdings": {}, "items": {}})
+            d["value"] += value
+            h = d["holdings"].setdefault(holding, {"label": holding, "kind": kind, "value": 0.0})
+            h["value"] += value
+            if item:
+                key = item["isin"] or item["name"]
+                i = d["items"].setdefault(key, {**item, "value": 0.0, "direct": 0.0})
+                i["value"] += value
+                if kind == "stock":
+                    i["direct"] += value
 
     def add(bucket: dict, key: str, value: float) -> None:
         bucket[key] = bucket.get(key, 0.0) + value
@@ -83,17 +97,25 @@ def look_through(items: list[dict], portfolios: dict[str, list[dict]], industry_
             c = company(item["isin"], item["label"])
             c["direct"] += value
             c["total"] += value
-            add(sectors, classify(industry_by_isin.get(item["isin"]) or item.get("sector")), value)
+            macro, industry = classify(industry_by_isin.get(item["isin"]) or item.get("sector"))
+            add(sectors, (macro, industry), value)
             add(assets, "equity", value)
+            contribute(["asset:equity", f"sector:{macro}", "kind:stock"], item["label"], "stock", value,
+                       {"name": item["label"], "isin": item["isin"], "tag": industry})
             continue
 
         fund_value += value
+        contribute([f"kind:{item['kind']}"], item["label"], item["kind"], value, None)
         rows = portfolios.get(item["portfolio"]) if item.get("portfolio") else None
         if not rows:
             asset = item.get("asset_class") or "other"
             add(assets, asset, value)
+            groups = [f"asset:{asset}"]
             if asset == "equity":
                 add(sectors, (UNCLASSIFIED, "Funds without a published portfolio"), value)
+                groups.append(f"sector:{UNCLASSIFIED}")
+            contribute(groups, item["label"], item["kind"], value,
+                       {"name": item["label"], "isin": None, "tag": "Holdings not published"})
             continue
 
         covered_value += value
@@ -105,8 +127,16 @@ def look_through(items: list[dict], portfolios: dict[str, list[dict]], industry_
             if commodity and asset != "cash":
                 asset = commodity
             add(assets, asset, share)
+            groups = [f"asset:{asset}"]
             if asset == "equity":
-                add(sectors, _equity_sector(row), share)
+                macro, industry = _equity_sector(row)
+                add(sectors, (macro, industry), share)
+                groups.append(f"sector:{macro}")
+                tag = industry
+            else:
+                tag = (row["holding_type"] or asset).replace("_", " ").capitalize()
+            contribute(groups, item["label"], item["kind"], share, {"name": row["name"], "isin": row["isin"], "tag": tag})
+            if asset == "equity":
                 c = company(row["isin"], row["name"])
                 c["total"] += share
                 add(c["via"], item["label"], share)
@@ -139,4 +169,12 @@ def look_through(items: list[dict], portfolios: dict[str, list[dict]], industry_
         "overlap": overlap,
         "coverage_pct": _pct(covered_value, fund_value),
         "by_kind": by_kind,
+        "breakdown": {
+            g: {
+                "value": d["value"],
+                "holdings": sorted(d["holdings"].values(), key=lambda h: -h["value"]),
+                "items": sorted(d["items"].values(), key=lambda i: -i["value"]),
+            }
+            for g, d in detail.items()
+        },
     }

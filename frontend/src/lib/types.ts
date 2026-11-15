@@ -89,6 +89,13 @@ export interface SectorGroup {
   industries: { industry: string; value: number; weight_pct: number | null }[];
 }
 
+export interface ExposureBreakdown {
+  key: string;
+  value: number;
+  holdings: { label: string; kind: "stock" | "etf" | "mf"; value: number }[];
+  items: { name: string; isin: string | null; tag: string; value: number; direct: number; symbol: string | null; tracked: boolean }[];
+}
+
 export interface Exposure {
   total: number;
   companies: {

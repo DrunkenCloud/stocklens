@@ -12,13 +12,14 @@ export interface DonutSlice {
 }
 
 export function Donut({
-  slices, size = 168, thickness = 22, active, onActiveChange, center, format = inrCompact,
+  slices, size = 168, thickness = 22, active, onActiveChange, onSelect, center, format = inrCompact,
 }: {
   slices: DonutSlice[];
   size?: number;
   thickness?: number;
   active?: string | null;
   onActiveChange?: (key: string | null) => void;
+  onSelect?: (key: string) => void;
   center?: React.ReactNode;
   format?: (v: number) => string;
 }) {
@@ -66,6 +67,7 @@ export function Donut({
                 opacity={focused && focused !== s.key ? 0.35 : 1}
                 onPointerMove={(e) => point(e, s.key)}
                 onPointerDown={(e) => point(e, s.key)}
+                onClick={onSelect ? () => onSelect(s.key) : undefined}
                 className="cursor-pointer transition-[opacity,stroke-width] duration-150"
               />
             );
