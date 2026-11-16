@@ -6,7 +6,7 @@ by hand as shares + total invested), plus search over every NSE/BSE equity,
 stock pages, a screener and a Data page for pipeline ops.
 
 FastAPI (`/api`) + PostgreSQL + Next.js static export. Prices from ICICI
-Breeze, fundamentals from Yahoo Finance, stock universe from ICICI's
+Breeze (Yahoo Finance when nobody logged in today), fundamentals and index levels from Yahoo Finance, stock universe from ICICI's
 SecurityMaster file. Hosted on an Azure VM at https://investlens.duckdns.org behind a
 site-wide Caddy password. It has to run there: ICICI's API only accepts calls from the VM's IP.
 
@@ -19,7 +19,7 @@ Area conventions: `backend/CLAUDE.md`, `pipeline/CLAUDE.md`, `frontend/CLAUDE.md
 3. **Pipeline stays out of the API process.** The backend spawns `pipeline/run_job.sh` as a
    detached subprocess (`backend/jobs.py`); it never imports pipeline code.
 4. **Secrets in env, never in git:** `BREEZE_API_KEY`, `BREEZE_API_SECRET`, `BREEZE_CALLBACK_TOKEN`,
-   `DATABASE_URL`. The daily Breeze session token lives in the `breeze_session` table.
+   `DATABASE_URL`, `GMAIL`, `GMAIL_PASSWORD` (app password for the daily email). The daily Breeze session token lives in the `breeze_session` table.
 5. **No LLM calls** anywhere unless the user asks.
 6. **No auth per feature.** The app is unauthenticated by design; auth would be a site-wide decision.
 7. **No code comments or docstrings.** Knowledge worth keeping goes in these CLAUDE.md files.
@@ -32,8 +32,23 @@ Area conventions: `backend/CLAUDE.md`, `pipeline/CLAUDE.md`, `frontend/CLAUDE.md
   date stay in holdings but are left out of XIRR and growth (the UI says how much).
 - Daily: user clicks "Log in to ICICI" → ICICI redirects to `/api/cb/<BREEZE_CALLBACK_TOKEN>` →
   token saved to `breeze_session` → `sync_icici` job: refresh securities if stale, prices, missing fundamentals.
+- No login needed for prices: `fetch_prices`, `fetch_live` and `onboard` use Breeze while the session is valid and
+  fall back to Yahoo (`pipeline/yahoo_prices.py`) otherwise, when the session dies mid-run, and for any
+  symbol or day Breeze answers with no data (Breeze's 1-minute data is often empty; days Breeze has stay Breeze's). The ICICI login only
+  adds Breeze's own prices. `fetch_live` without a session is one batched Yahoo 1-minute request for all held symbols.
+- Indexes: `market_indices` (seeded list: Nifty 50, Sensex, Next 50, Midcap 150, Smallcap 250, Nifty 500) and
+  `index_prices`, refreshed from Yahoo at the end of every full `fetch_prices` and live in `fetch_live`.
+  `/portfolio/benchmarks` replays every dated buy/sell into each index (`backend/services/benchmark.py`) for an
+  "XIRR if the same money had gone into the index"; holdings with an undated entry are left out on both sides.
+- Tax (`/tax`, `backend/services/tax.py`): FIFO lots per holding and broker (the ledger elsewhere uses average cost),
+  Indian rules since 23 Jul 2024: equity LT after 12 months (ST 20%, LT 12.5% above ₹1.25L/FY), gold/silver ETFs
+  12 months, FoFs and other non-equity funds 24 months, debt funds bought from Apr 2023 always ST. Facts only.
+- `/portfolio/insights`: month-to-date movers net of money added, and drop from peak on a time-weighted index.
+- Daily email: `daily_report` (Mon–Fri 19:45) reads the backend's own HTTP API on 127.0.0.1:8000 and mails
+  `GMAIL` from `GMAIL` via Gmail SMTP. Skips holidays (no prices for today) and days a scheduled one already went out;
+  the Data page button sends one now (`--force`). Funds show at last NAV (AMFI NAVs load at 23:30).
 - Tracking a stock (search → Track, or a manual holding for an untracked stock) inserts into
-  `companies` and spawns `onboard` (fundamentals now, prices if the session is valid).
+  `companies` and spawns `onboard` (fundamentals and price history now, from Breeze or Yahoo).
 - Mutual funds: buy/sell entries in `mf_transactions` (per fund per broker, average cost); positions,
   realised gains and value come from those + `mf_nav`. `refresh_mf` loads every scheme's NAV from AMFI and
   backfills history (MFapi) for held funds. `/portfolio?scope=all|stocks|mf` merges stocks, ETFs and funds.
@@ -45,16 +60,16 @@ Area conventions: `backend/CLAUDE.md`, `pipeline/CLAUDE.md`, `frontend/CLAUDE.md
   Sector charts cover only the equity part and group AMFI industries (plus Yahoo sector names for stocks no fund
   holds) into ~12 macro sectors via the table in `backend/services/sectors.py`; a label missing from it shows as
   "Unclassified" with its own name, so new labels are visible and go into that table.
-- Live prices: `fetch_live` runs every 5 min Mon–Fri 09:20–15:40 for held stocks/ETFs only, merging today's Breeze
+- Live prices: `fetch_live` runs every 5 min Mon–Fri 09:20–15:40 for held stocks/ETFs only, merging today's Breeze (or Yahoo)
   1-minute bars into today's `daily_prices` row (so holdings, day change and charts move with no extra code); the
   19:00 `fetch_prices` re-fetches each symbol's latest stored day, replacing it with the official daily bar. `/status`
   `live_at` is set while runs are recent; the frontend refetches when it changes. Its runs are hidden from the Data
   page except the latest, and it is excluded from `running`. Budget: Breeze allows ~5,000 calls/day and 75–100/min;
   42 held × ~77 runs ≈ 3,200/day. Above ~55 held symbols, switch `stocklens-live.timer` to every 10 min.
-- Timers (pinned to Asia/Kolkata; the VM clock is UTC): live prices Mon–Fri every 5 min in market hours, prices Mon–Fri 19:00, MF NAVs daily 23:30, fund portfolios Wed/Sun 04:00, securities Sun 02:00,
+- Timers (pinned to Asia/Kolkata; the VM clock is UTC): live prices Mon–Fri every 5 min in market hours, prices Mon–Fri 19:00, daily email Mon–Fri 19:45, MF NAVs daily 23:30, fund portfolios Wed/Sun 04:00, securities Sun 02:00,
   fundamentals Sun 03:00;
-  `Persistent=true` catches up after the machine was off. Jobs skip cleanly (exit 75, status
-  `skipped`) without a valid session.
+  `Persistent=true` catches up after the machine was off. `sync_icici` skips cleanly (exit 75, status
+  `skipped`) without a valid session; price jobs fall back to Yahoo instead.
 
 ## Local dev
 
@@ -104,5 +119,7 @@ updates, fail2ban, sshd drop-in, ufw (22/80/443), Caddyfile with `basic_auth` on
   Some schemes (Motilal Oswal Multi Cap) have blank Plan/Option; refresh keeps a previously set value.
 - Opening MF positions were entered from app screenshots: units = current value ÷ NAV on 13 Nov 2026,
   purchase dates unknown (so no XIRR until dated entries exist).
+- Yahoo prices: use `history(auto_adjust=False)` `Close`, which is split-adjusted but not dividend-adjusted, matching
+  Breeze. Index tickers: `^NSEI`, `^BSESN`, `^NSMIDCP` (Next 50), `NIFTYMIDCAP150.NS`, `NIFTYSMLCAP250.NS`, `^CRSLDX` (500).
 - Yahoo (`{SYMBOL}.NS`, BSE-only `{SYMBOL}.BO`): roe/op_margin/revenueGrowth are fractions (×100), debtToEquity is ×100
   pre-scaled (÷100), dividendYield is already a percent.

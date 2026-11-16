@@ -124,6 +124,48 @@ def holding_rows(conn, scope: str) -> tuple[list[dict], dict]:
     return rows, overall
 
 
+def price_history(conn, keys: set, since: dt.date) -> dict[tuple, list[tuple[dt.date, float]]]:
+    symbols = sorted({k[1] for k in keys if k[0] == "st"})
+    codes = sorted({k[1] for k in keys if k[0] == "mf"})
+    by_asset: dict[tuple, list] = {}
+    if symbols:
+        for r in conn.execute(
+            "SELECT symbol, date, close::float AS p FROM daily_prices WHERE symbol = ANY(%s) AND date >= %s ORDER BY date",
+            (symbols, since),
+        ):
+            by_asset.setdefault(("st", r["symbol"]), []).append((r["date"], r["p"]))
+    if codes:
+        for r in conn.execute(
+            "SELECT code, date, nav::float AS p FROM mf_nav WHERE code = ANY(%s) AND date >= %s ORDER BY date",
+            (codes, since),
+        ):
+            by_asset.setdefault(("mf", r["code"]), []).append((r["date"], r["p"]))
+    return {k: by_asset.get((k[0], k[1]), []) for k in keys}
+
+
+def asset_info(conn, keys: set) -> dict[tuple, dict]:
+    symbols = sorted({k[1] for k in keys if k[0] == "st"})
+    codes = sorted({k[1] for k in keys if k[0] == "mf"})
+    companies = {c["symbol"]: c for c in conn.execute(
+        "SELECT symbol, name, kind, asset_class FROM companies WHERE symbol = ANY(%s)", (symbols,)
+    )} if symbols else {}
+    schemes = {s["code"]: s for s in conn.execute(
+        "SELECT code, name, plan, category, asset_class FROM mf_schemes WHERE code = ANY(%s)", (codes,)
+    )} if codes else {}
+    out = {}
+    for key in keys:
+        kind, asset, broker = key
+        if kind == "st":
+            c = companies[asset]
+            out[key] = {"name": c["name"], "symbol": asset, "kind": c["kind"], "broker": broker,
+                        "asset_class": c["asset_class"], "category": None}
+        else:
+            s = schemes[asset]
+            out[key] = {"name": scheme_label(s), "symbol": str(asset), "kind": "mf", "broker": broker,
+                        "asset_class": s["asset_class"], "category": s["category"]}
+    return out
+
+
 def growth(conn, scope: str, since: dt.date) -> dict:
     txs = load_ledger(conn, scope)
     undated_keys = {t["key"] for t in txs if t["date"] is None}
@@ -131,25 +173,7 @@ def growth(conn, scope: str, since: dt.date) -> dict:
     excluded = positions([t for t in txs if t["key"] in undated_keys])
 
     first = min((t["date"] for t in dated), default=None)
-    prices: dict[tuple, list[tuple[dt.date, float]]] = {}
-    if first:
-        symbols = sorted({t["key"][1] for t in dated if t["key"][0] == "st"})
-        codes = sorted({t["key"][1] for t in dated if t["key"][0] == "mf"})
-        by_asset: dict[tuple, list] = {}
-        if symbols:
-            for r in conn.execute(
-                "SELECT symbol, date, close::float AS p FROM daily_prices WHERE symbol = ANY(%s) AND date >= %s ORDER BY date",
-                (symbols, first - dt.timedelta(days=10)),
-            ):
-                by_asset.setdefault(("st", r["symbol"]), []).append((r["date"], r["p"]))
-        if codes:
-            for r in conn.execute(
-                "SELECT code, date, nav::float AS p FROM mf_nav WHERE code = ANY(%s) AND date >= %s ORDER BY date",
-                (codes, first - dt.timedelta(days=10)),
-            ):
-                by_asset.setdefault(("mf", r["code"]), []).append((r["date"], r["p"]))
-        for t in dated:
-            prices[t["key"]] = by_asset.get((t["key"][0], t["key"][1]), [])
+    prices = price_history(conn, {t["key"] for t in dated}, first - dt.timedelta(days=10)) if first else {}
 
     series = [p for p in growth_series(dated, prices) if p["date"] >= since]
     return {

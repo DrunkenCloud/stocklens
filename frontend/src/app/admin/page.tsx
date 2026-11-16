@@ -15,13 +15,14 @@ import { cn } from "@/lib/utils";
 
 const JOBS: Record<string, { label: string; detail: string }> = {
   sync_icici: { label: "Update after login", detail: "Fetch prices and any missing fundamentals. Needs today's ICICI login." },
-  fetch_prices: { label: "Update prices", detail: "Fetch new daily prices for every tracked stock." },
+  fetch_prices: { label: "Update prices", detail: "Fetch new daily prices for every tracked stock and the market indexes, from ICICI when logged in, otherwise Yahoo." },
   fetch_live: { label: "Update live prices", detail: "Today's prices so far for the stocks and ETFs you hold. Runs every 5 minutes while the market is open." },
   fetch_fundamentals: { label: "Update fundamentals", detail: "Refresh ratios from Yahoo Finance for every tracked stock." },
   refresh_securities: { label: "Refresh stock list", detail: "Re-download ICICI's list of NSE and BSE stocks used by search." },
   fetch_prices_backfill: { label: "Reload price history", detail: "Re-download full daily history since 2015. Takes a while." },
   onboard: { label: "Load new stock", detail: "" },
   refresh_fund_portfolios: { label: "Update fund portfolios", detail: "Fetch the latest published holdings of every fund and ETF you own (for Exposure)." },
+  daily_report: { label: "Send daily email", detail: "Email today's report to you now. It also goes out Mon–Fri at 19:45 when there are new prices." },
   refresh_mf: { label: "Update fund NAVs", detail: "Load every mutual fund's latest NAV from AMFI and fill in history for your funds." },
 };
 
@@ -33,9 +34,9 @@ const STATUS_STYLE: Record<JobStatus, string> = {
 };
 
 const SESSION_TEXT = {
-  valid: "Connected for today. Prices update automatically.",
-  expired: "Today's session has expired or hasn't started. Log in to update prices.",
-  never: "Not connected yet. Log in once a day so prices can update.",
+  valid: "Connected for today. Prices come from ICICI.",
+  expired: "Not connected today. Prices still update from Yahoo, about 15 minutes behind; log in for ICICI's own prices.",
+  never: "Not connected. Prices update from Yahoo, about 15 minutes behind; log in for ICICI's own prices.",
 };
 
 function duration(run: JobRun) {

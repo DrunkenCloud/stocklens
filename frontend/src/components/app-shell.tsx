@@ -1,6 +1,6 @@
 "use client";
 
-import { ChartNoAxesColumnIcon, LayersIcon, MoonIcon, SettingsIcon, SunIcon, WalletIcon } from "lucide-react";
+import { ChartNoAxesColumnIcon, LayersIcon, MoonIcon, ReceiptIndianRupeeIcon, SettingsIcon, SunIcon, WalletIcon } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTheme } from "next-themes";
@@ -12,6 +12,7 @@ import { cn } from "@/lib/utils";
 const NAV = [
   { href: "/", label: "Holdings", icon: WalletIcon },
   { href: "/exposure", label: "Exposure", icon: LayersIcon },
+  { href: "/tax", label: "Tax", icon: ReceiptIndianRupeeIcon },
   { href: "/screener", label: "Screener", icon: ChartNoAxesColumnIcon },
   { href: "/admin", label: "Data", icon: SettingsIcon },
 ];
@@ -50,7 +51,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <main className="mx-auto w-full max-w-7xl flex-1 px-4 pt-6 pb-24 md:pb-12">{children}</main>
       <nav
         aria-label="Main"
-        className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-4 border-t border-border bg-background/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden"
+        className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 border-t border-border bg-background/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden"
       >
         {NAV.map((n) => (
           <Link

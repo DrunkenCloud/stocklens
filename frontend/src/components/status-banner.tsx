@@ -4,7 +4,6 @@ import { LoaderCircleIcon } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
 
-import { Button } from "@/components/ui/button";
 import { openIciciLogin, useStatus } from "@/lib/queries";
 
 const JOB_LABELS: Record<string, string> = {
@@ -15,6 +14,7 @@ const JOB_LABELS: Record<string, string> = {
   onboard: "Loading data for a newly tracked stock",
   refresh_mf: "Updating fund NAVs",
   refresh_fund_portfolios: "Loading fund portfolios",
+  daily_report: "Sending the daily email",
 };
 
 export async function loginToIcici() {
@@ -39,17 +39,6 @@ export function StatusBanner() {
       <Strip tone="info">
         <LoaderCircleIcon className="size-4 animate-spin" aria-hidden />
         {JOB_LABELS[job] ?? "Updating data"}…
-      </Strip>
-    );
-  }
-  if (status.breeze.state !== "valid") {
-    return (
-      <Strip tone="warn">
-        <span className="flex-1">
-          {status.breeze.state === "never" ? "ICICI isn't connected yet." : "Today's ICICI login has expired or hasn't happened yet."}{" "}
-          Log in to ICICI to update today&apos;s prices.
-        </span>
-        <Button size="sm" onClick={loginToIcici}>Log in to ICICI</Button>
       </Strip>
     );
   }

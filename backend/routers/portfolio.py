@@ -6,9 +6,11 @@ from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field, model_validator
 
 from db import pool
-from holdings import DEFAULT_USER_ID, exposure_breakdown, exposure_from_rows, growth, holding_rows, load_ledger
+from holdings import DEFAULT_USER_ID, asset_info, exposure_breakdown, exposure_from_rows, growth, holding_rows, load_ledger, price_history
 from jobs import spawn_job
 from routers.securities import ensure_tracked
+from services.benchmark import index_equivalent, period_changes
+from services.insights import drawdown, month_movers
 from services.ledger import positions
 from services.portfolio import summarize
 
@@ -47,6 +49,67 @@ def get_exposure_breakdown(key: str = Query(..., pattern="^(asset|sector|kind):.
 def get_growth(days: int = Query(365, ge=7, le=365 * 30), scope: str = Scope):
     with pool.connection() as conn:
         return growth(conn, scope, dt.date.today() - dt.timedelta(days=days))
+
+
+@router.get("/portfolio/benchmarks")
+def get_benchmarks():
+    today = dt.date.today()
+    with pool.connection() as conn:
+        rows, overall = holding_rows(conn, "all")
+        txs = load_ledger(conn, "all")
+        indices = conn.execute("SELECT symbol, name FROM market_indices ORDER BY position").fetchall()
+        series: dict[str, list] = {}
+        for r in conn.execute("SELECT symbol, date, close::float AS close FROM index_prices ORDER BY symbol, date"):
+            series.setdefault(r["symbol"], []).append((r["date"], r["close"]))
+
+    undated = {t["key"] for t in txs if t["date"] is None}
+    flows = [(t["date"], -float(t["amount"]) if t["kind"] == "buy" else float(t["amount"])) for t in txs if t["key"] not in undated]
+    out = []
+    for idx in indices:
+        s = series.get(idx["symbol"], [])
+        out.append({
+            "symbol": idx["symbol"], "name": idx["name"],
+            "close": s[-1][1] if s else None, "date": s[-1][0] if s else None,
+            **period_changes(s), **index_equivalent(flows, s, today),
+        })
+    return {
+        "portfolio": {
+            "xirr": overall["xirr"],
+            "coverage_pct": overall["xirr_coverage_pct"],
+            "invested": -sum(a for _, a in flows),
+            "value": sum(r["quantity"] * r["close"] for r in rows if r["dated"] and r["close"] is not None),
+            "first_date": min((d for d, _ in flows), default=None),
+        },
+        "indices": out,
+    }
+
+
+MOVERS = 5
+
+
+@router.get("/portfolio/insights")
+def get_insights():
+    today = dt.date.today()
+    month_start = today.replace(day=1)
+    with pool.connection() as conn:
+        txs = load_ledger(conn, "all")
+        keys = {t["key"] for t in txs}
+        movers = month_movers(txs, price_history(conn, keys, month_start - dt.timedelta(days=15)), today)
+        info = asset_info(conn, {m["key"] for m in movers})
+        series = growth(conn, "all", dt.date.min)["series"]
+
+    undated = {t["key"] for t in txs if t["date"] is None}
+    flows = [(t["date"], float(t["amount"]) * (1 if t["kind"] == "buy" else -1)) for t in txs if t["key"] not in undated]
+    rows = [{**info[m["key"]], "change": m["change"]} for m in movers]
+    return {
+        "month_start": month_start,
+        "movers": {
+            "up": sorted((r for r in rows if r["change"] > 0), key=lambda r: -r["change"])[:MOVERS],
+            "down": sorted((r for r in rows if r["change"] < 0), key=lambda r: r["change"])[:MOVERS],
+        },
+        "drawdown": drawdown(series, flows),
+        "excluded_count": len(undated),
+    }
 
 
 class StockTxIn(BaseModel):

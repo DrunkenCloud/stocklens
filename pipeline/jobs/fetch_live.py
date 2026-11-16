@@ -2,27 +2,16 @@ import datetime as dt
 import sys
 import time
 
+from pipeline.bars import day_bar
 from pipeline.breeze_client import SessionExpired, check_response, get_client, is_session_error
+from pipeline.fundamentals_source import yahoo_tickers
+from pipeline.indices import live_indices
 from pipeline.db import connect
 from pipeline.jobs.fetch_prices import upsert_rows
 from pipeline.run import SKIPPED_EXIT
+from pipeline.yahoo_prices import minute_bars
 
 PACE_SECONDS = 0.85
-
-
-def day_bar(bars: list[dict], day: dt.date) -> dict | None:
-    prefix = day.isoformat()
-    today = sorted((b for b in bars if b["datetime"].startswith(prefix)), key=lambda b: b["datetime"])
-    if not today:
-        return None
-    return {
-        "datetime": today[0]["datetime"],
-        "open": float(today[0]["open"]),
-        "high": max(float(b["high"]) for b in today),
-        "low": min(float(b["low"]) for b in today),
-        "close": float(today[-1]["close"]),
-        "volume": sum(int(float(b.get("volume") or 0)) for b in today),
-    }
 
 
 def _minute_bars(client, breeze_code: str, exchange: str, day: dt.date) -> list[dict]:
@@ -39,47 +28,91 @@ def _minute_bars(client, breeze_code: str, exchange: str, day: dt.date) -> list[
     return check_response(client.get_historical_data(**kwargs))
 
 
+HELD_SQL = """
+SELECT c.symbol, c.breeze_code, c.exchange FROM companies c
+JOIN stock_transactions t ON t.symbol = c.symbol
+WHERE c.is_active
+GROUP BY c.symbol, c.breeze_code, c.exchange
+HAVING sum(CASE t.kind WHEN 'buy' THEN t.quantity ELSE -t.quantity END) > 0
+ORDER BY c.symbol
+"""
+
+
+def _breeze(conn, client, held, day: dt.date) -> tuple[list[str], int, list]:
+    failures, updated, missing = [], 0, []
+    for row in held:
+        symbol, breeze_code, exchange = row
+        if not breeze_code:
+            missing.append(row)
+            continue
+        try:
+            bar = day_bar(_minute_bars(client, breeze_code, exchange, day), day)
+            if bar:
+                upsert_rows(conn, symbol, [bar])
+                updated += 1
+            else:
+                missing.append(row)
+        except SessionExpired:
+            raise
+        except Exception as e:
+            conn.rollback()
+            if is_session_error(e):
+                raise SessionExpired(str(e)) from e
+            failures.append(symbol)
+            print(f"{symbol}: FAILED - {e}")
+        time.sleep(PACE_SECONDS)
+    return failures, updated, missing
+
+
+def _yahoo(conn, held, day: dt.date) -> tuple[list[str], int]:
+    tickers = {symbol: yahoo_tickers(symbol, exchange, None)[0] for symbol, _, exchange in held}
+    failures, updated = [], 0
+    for symbol, bars in minute_bars(tickers, day).items():
+        bar = day_bar(bars, day)
+        if not bar:
+            continue
+        try:
+            upsert_rows(conn, symbol, [bar])
+            updated += 1
+        except Exception as e:
+            conn.rollback()
+            failures.append(symbol)
+            print(f"{symbol}: FAILED - {e}")
+    return failures, updated
+
+
 def run(day: dt.date) -> tuple[list[str], int]:
-    client = get_client()
-    failures = []
+    try:
+        client = get_client()
+    except SessionExpired:
+        client = None
     with connect() as conn:
-        held = conn.execute(
-            """
-            SELECT c.symbol, c.breeze_code, c.exchange FROM companies c
-            JOIN stock_transactions t ON t.symbol = c.symbol
-            WHERE c.is_active AND c.breeze_code IS NOT NULL
-            GROUP BY c.symbol, c.breeze_code, c.exchange
-            HAVING sum(CASE t.kind WHEN 'buy' THEN t.quantity ELSE -t.quantity END) > 0
-            ORDER BY c.symbol
-            """
-        ).fetchall()
-        updated = 0
-        for symbol, breeze_code, exchange in held:
+        held = conn.execute(HELD_SQL).fetchall()
+        source = "breeze"
+        if client:
             try:
-                bar = day_bar(_minute_bars(client, breeze_code, exchange, day), day)
-                if bar:
-                    upsert_rows(conn, symbol, [bar])
-                    updated += 1
+                failures, updated, missing = _breeze(conn, client, held, day)
+                if missing:
+                    more_failures, more = _yahoo(conn, missing, day)
+                    failures, updated = failures + more_failures, updated + more
+                    source = f"breeze, yahoo for {more} of {len(missing)} Breeze had no data for"
             except SessionExpired:
-                raise
-            except Exception as e:
-                conn.rollback()
-                if is_session_error(e):
-                    raise SessionExpired(str(e)) from e
-                failures.append(symbol)
-                print(f"{symbol}: FAILED - {e}")
-            time.sleep(PACE_SECONDS)
-    print(f"live prices: {updated} of {len(held)} held stocks updated for {day}")
+                client = None
+        if not client:
+            source = "yahoo"
+            failures, updated = _yahoo(conn, held, day)
+        try:
+            print(f"live indices: {live_indices(conn, day)} updated")
+        except Exception as e:
+            conn.rollback()
+            print(f"live indices: FAILED - {e}")
+    print(f"live prices ({source}): {updated} of {len(held)} held stocks updated for {day}")
     return failures, updated
 
 
 def main() -> None:
     day = dt.date.fromisoformat(sys.argv[1]) if len(sys.argv) > 1 else dt.date.today()
-    try:
-        failures, updated = run(day)
-    except SessionExpired as e:
-        print(f"skipped: Breeze session not valid ({e}) - log in to ICICI from the app")
-        sys.exit(SKIPPED_EXIT)
+    failures, updated = run(day)
     if updated == 0 and not failures:
         print(f"skipped: no trades on {day} (market closed)")
         sys.exit(SKIPPED_EXIT)

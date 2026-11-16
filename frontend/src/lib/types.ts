@@ -275,3 +275,60 @@ export interface Company {
   price_date: string | null;
   close: number | null;
 }
+
+export interface IndexRow {
+  symbol: string;
+  name: string;
+  close: number | null;
+  date: string | null;
+  day_pct: number | null;
+  month_pct: number | null;
+  year_pct: number | null;
+  value: number | null;
+  xirr: number | null;
+}
+
+export interface Benchmarks {
+  portfolio: { xirr: number | null; coverage_pct: number | null; invested: number; value: number; first_date: string | null };
+  indices: IndexRow[];
+}
+
+export interface AssetRef {
+  name: string;
+  symbol: string;
+  kind: string;
+  broker: string;
+}
+
+export interface Insights {
+  month_start: string;
+  movers: { up: (AssetRef & { change: number })[]; down: (AssetRef & { change: number })[] };
+  drawdown: { current_pct: number; peak_date: string; max_pct: number } | null;
+  excluded_count: number;
+}
+
+export type TaxClass = "equity" | "listed_other" | "unlisted_other" | "debt";
+export type Term = "short" | "long" | "always_short" | "unknown";
+
+export interface TaxLot extends AssetRef {
+  tax_class: TaxClass;
+  date: string | null;
+  units: number;
+  cost: number;
+  value: number | null;
+  gain: number | null;
+  term: Term;
+  long_term_on: string | null;
+  days_left?: number;
+}
+
+export type GainSplit = Partial<Record<TaxClass, { short: number; long: number; unknown: number }>>;
+
+export interface Tax {
+  fy: { start: string; end: string };
+  exemption: { limit: number; used: number; remaining: number };
+  realised: GainSplit;
+  unrealised: GainSplit;
+  upcoming: TaxLot[];
+  lots: TaxLot[];
+}

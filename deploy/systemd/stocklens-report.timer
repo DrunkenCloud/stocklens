@@ -1,0 +1,10 @@
+[Unit]
+Description=StockLens: daily email report after prices
+
+[Timer]
+OnCalendar=Mon..Fri 19:45 Asia/Kolkata
+Persistent=true
+Unit=stocklens-job@daily_report.service
+
+[Install]
+WantedBy=timers.target

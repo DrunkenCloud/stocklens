@@ -7,9 +7,11 @@ import { useState } from "react";
 import { MfForm } from "@/components/mf/mf-form";
 import { Segmented } from "@/components/panel";
 import { Allocation } from "@/components/portfolio/allocation";
+import { Benchmarks } from "@/components/portfolio/benchmarks";
 import { Figures } from "@/components/portfolio/figures";
 import { Heatmap } from "@/components/portfolio/heatmap";
 import { HoldingsTable } from "@/components/portfolio/holdings-table";
+import { Movers } from "@/components/portfolio/movers";
 import { GrowthChart } from "@/components/portfolio/growth-chart";
 import { StockEntryForm } from "@/components/portfolio/stock-entry-form";
 import { loginToIcici } from "@/components/status-banner";
@@ -67,7 +69,7 @@ export default function HoldingsPage() {
         <h2 className="text-2xl font-medium tracking-tight">{scope === "mf" ? "No mutual funds yet" : "No holdings yet"}</h2>
         <p className="mt-3 text-muted-foreground">
           Add what you bought and sold at any broker, with dates, and StockLens works out holdings, returns and XIRR.
-          Log in to ICICI daily so prices stay current.
+          Prices update on their own every trading day.
         </p>
         <div className="mt-6 flex flex-wrap gap-2">
           {status?.breeze.state !== "valid" && <Button onClick={loginToIcici}>Log in to ICICI</Button>}
@@ -84,6 +86,12 @@ export default function HoldingsPage() {
           <div className="lg:col-span-2"><GrowthChart scope={scope} /></div>
           <Allocation portfolio={portfolio} />
         </div>
+        {scope === "all" && (
+          <div className="grid gap-4 lg:grid-cols-3">
+            <div className="lg:col-span-2"><Benchmarks /></div>
+            <Movers />
+          </div>
+        )}
         <Heatmap holdings={portfolio.holdings} />
         <HoldingsTable
           holdings={portfolio.holdings}
@@ -106,12 +114,15 @@ export default function HoldingsPage() {
                 <span className="absolute inline-flex size-full animate-ping rounded-full bg-gain opacity-60 motion-reduce:hidden" />
                 <span className="relative inline-flex size-2 rounded-full bg-gain" />
               </span>
-              <span><span className="font-medium text-gain">Live</span>, stock and ETF prices updated {ago(status.live_at)}; funds at last NAV</span>
+              <span>
+                <span className="font-medium text-gain">Live</span>, stock and ETF prices updated {ago(status.live_at)}
+                {status.breeze.state !== "valid" && " (Yahoo, about 15 min behind)"}; funds at last NAV
+              </span>
             </p>
           ) : (
             <p className="text-xs text-muted-foreground">
               Prices as of {date(status?.prices_as_of)}
-              {status?.last_sync?.status === "done" && `, ICICI synced ${ago(status.last_sync.finished_at)}`}
+              {status && status.breeze.state !== "valid" ? ", from Yahoo" : status?.last_sync?.status === "done" && `, ICICI synced ${ago(status.last_sync.finished_at)}`}
             </p>
           )}
         </div>

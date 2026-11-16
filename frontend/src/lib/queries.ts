@@ -5,7 +5,7 @@ import { useEffect, useRef } from "react";
 
 import { api } from "@/lib/api";
 import type {
-  Company, Exposure, ExposureBreakdown, Fund, Growth, JobRun, MfScheme, MfTransactionInput, Portfolio, Scope, StockTransaction, StockTransactionInput, PricePoint, Returns, ScreenRow, Security, Status, Stock,
+  Benchmarks, Insights, Tax, Company, Exposure, ExposureBreakdown, Fund, Growth, JobRun, MfScheme, MfTransactionInput, Portfolio, Scope, StockTransaction, StockTransactionInput, PricePoint, Returns, ScreenRow, Security, Status, Stock,
 } from "@/lib/types";
 
 export const keys = {
@@ -25,6 +25,9 @@ export const keys = {
   runs: ["runs"] as const,
   run: (id: number) => ["run", id] as const,
   companies: ["companies"] as const,
+  benchmarks: ["benchmarks"] as const,
+  insights: ["insights"] as const,
+  tax: ["tax"] as const,
 };
 
 export function useStatus() {
@@ -44,7 +47,7 @@ export function useStatus() {
   }, [running, qc]);
   useEffect(() => {
     if (liveAt && lastLive.current && liveAt !== lastLive.current) {
-      for (const key of ["portfolio", "growth", "exposure", "prices", "stock"]) qc.invalidateQueries({ queryKey: [key] });
+      for (const key of ["portfolio", "growth", "exposure", "prices", "stock", "benchmarks", "insights", "tax"]) qc.invalidateQueries({ queryKey: [key] });
     }
     lastLive.current = liveAt;
   }, [liveAt, qc]);
@@ -203,3 +206,9 @@ export async function openIciciLogin() {
   const { url } = await api<{ url: string }>("/breeze/login-url");
   window.location.href = url;
 }
+
+export const useBenchmarks = () => useQuery({ queryKey: keys.benchmarks, queryFn: () => api<Benchmarks>("/portfolio/benchmarks") });
+
+export const useInsights = () => useQuery({ queryKey: keys.insights, queryFn: () => api<Insights>("/portfolio/insights") });
+
+export const useTax = () => useQuery({ queryKey: keys.tax, queryFn: () => api<Tax>("/tax") });

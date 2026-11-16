@@ -3,10 +3,11 @@ import datetime as dt
 import sys
 import time
 
-from pipeline.breeze_client import SessionExpired, check_response, get_client, is_session_error
+from pipeline.breeze_client import SessionExpired, check_response, get_client, is_session_error, mark_session_invalid
 from pipeline.db import connect
-from pipeline.run import SKIPPED_EXIT
+from pipeline.indices import refresh_indices
 from pipeline.splits import detect_splits
+from pipeline.yahoo_prices import daily_bars
 
 BACKFILL_START = dt.date(2015, 1, 1)
 RETRIES = 3
@@ -82,6 +83,18 @@ def fetch_symbol(client, breeze_code: str, from_date: dt.date, to_date: dt.date,
     return rows
 
 
+def top_up(rows: list[dict], from_date: dt.date, today: dt.date, fetch) -> list[dict]:
+    last = max((dt.date.fromisoformat(r["datetime"][:10]) for r in rows), default=None)
+    start = last + dt.timedelta(days=1) if last else from_date
+    if start > today:
+        return rows
+    try:
+        extra = fetch(start)
+    except ValueError:
+        return rows
+    return rows + [b for b in extra if last is None or dt.date.fromisoformat(b["datetime"][:10]) > last]
+
+
 def upsert_rows(conn, symbol: str, rows: list[dict]) -> None:
     parsed = [normalize_row(r) for r in rows]
     with conn.cursor() as cur:
@@ -116,40 +129,54 @@ def adjust_splits(conn, symbols: list[str]) -> None:
         conn.commit()
 
 
+def _client_or_none():
+    try:
+        return get_client()
+    except SessionExpired:
+        return None
+
+
 def run(symbols: list[str] | None = None, backfill: bool = False) -> list[str]:
-    client = get_client()
+    client = _client_or_none()
+    print("source: ICICI Breeze" if client else "source: yahoo (no ICICI session)")
     today = dt.date.today()
     failures = []
 
     with connect() as conn:
         companies = conn.execute(
             """
-            SELECT c.symbol, c.breeze_code, c.exchange, max(p.date)
+            SELECT c.symbol, c.breeze_code, c.exchange, s.bse_code, max(p.date)
             FROM companies c LEFT JOIN daily_prices p ON p.symbol = c.symbol
+            LEFT JOIN securities s ON s.isin = c.isin
             WHERE c.is_active AND (%(symbols)s::text[] IS NULL OR c.symbol = ANY(%(symbols)s::text[]))
-            GROUP BY c.symbol, c.breeze_code, c.exchange ORDER BY c.symbol
+            GROUP BY c.symbol, c.breeze_code, c.exchange, s.bse_code ORDER BY c.symbol
             """,
             {"symbols": symbols},
         ).fetchall()
 
-        for symbol, breeze_code, exchange, last_date in companies:
-            if not breeze_code:
-                failures.append(symbol)
-                print(f"{symbol}: SKIPPED - no breeze_code (not in ICICI's security master?)")
-                continue
+        for symbol, breeze_code, exchange, bse_code, last_date in companies:
             from_date = incremental_from_date(last_date, today, backfill)
             if from_date > today:
                 continue
             try:
-                rows = fetch_symbol(client, breeze_code, from_date, today, exchange)
+                rows = None
+                if client and breeze_code:
+                    try:
+                        rows = fetch_symbol(client, breeze_code, from_date, today, exchange)
+                    except Exception as e:
+                        if not (isinstance(e, SessionExpired) or is_session_error(e)):
+                            raise
+                        mark_session_invalid()
+                        client = None
+                        print("ICICI session ended mid-run; continuing from yahoo")
+                if rows is None:
+                    rows = daily_bars(symbol, exchange, bse_code, from_date)
+                else:
+                    rows = top_up(rows, from_date, today, lambda start: daily_bars(symbol, exchange, bse_code, start))
                 upsert_rows(conn, symbol, rows)
                 print(f"{symbol}: {len(rows)} rows ({from_date} -> {today})")
-            except SessionExpired:
-                raise
             except Exception as e:
                 conn.rollback()
-                if is_session_error(e):
-                    raise SessionExpired(str(e)) from e
                 failures.append(symbol)
                 print(f"{symbol}: FAILED - {e}")
 
@@ -166,11 +193,10 @@ def main() -> None:
     parser.add_argument("--symbols", help="comma-separated; default all active companies")
     args = parser.parse_args()
 
-    try:
-        failures = run(args.symbols.split(",") if args.symbols else None, backfill=args.backfill)
-    except SessionExpired as e:
-        print(f"skipped: Breeze session not valid ({e}) - log in to ICICI from the app")
-        sys.exit(SKIPPED_EXIT)
+    failures = run(args.symbols.split(",") if args.symbols else None, backfill=args.backfill)
+    if not args.symbols:
+        with connect() as conn:
+            failures += refresh_indices(conn)
     if failures:
         sys.exit(1)
     print("prices up to date")
